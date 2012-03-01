@@ -6,7 +6,7 @@
 
 # Observable #
 
-Available methods
+## Available methods ##
 * on eventType, handler
 * off eventType, handler
 * trigger eventType, ..
@@ -19,7 +19,7 @@ class PlayerObservable extends Observable
   constructor: ->
     super
 
-    @on 'change:x', ->
+    @on 'change:x', (x) ->
       console.log 'x:' + x
 
     @on 'stop', ->
@@ -41,7 +41,7 @@ class PlayerObservable extends Observable
 
 # Application.Observable #
 
-Available methods:
+## Available methods ##
 * require typePluralized, name
 
 ```coffeescript
@@ -72,15 +72,15 @@ class App extends Application
 
 # Router.Observable #
 
-Overridable settings:
+## Overridable settings ##
 * routesMasks: {}
 * rules: {}
 
-Options:
+## Options ##
 * reverse: false
 * recursive: true
 
-Available methods:
+## Available methods ##
 * startHistory
 * setRoute route
 * getRoute
@@ -104,12 +104,12 @@ class exports.MainRouter extends Router
 
 # Model.Observable #
 
-Available relationships:
+## Available relationships ##
 * has_many
 * has_one
 * belongs_to
 
-Available options index:
+## Available options index ##
 * unique
 
 ```coffeescript
@@ -140,10 +140,10 @@ class exports.AvatarModel extends Model
 
 # Controller.Observable #
 
-Overridable settings:
+## Overridable settings ##
 * events: {}
 
-Available methods:
+## Available methods ##
 * addEvent selector, eventName, method
 * delegateEvents context, action = 'on'
 * delegateEvent selector, context, eventName, handler, action = 'on'
@@ -168,12 +168,12 @@ class exports.HomeController extends Controller
 
 # View.Observable #
 
-Overridable settings:
+## Overridable settings##
 * attributes: {}
 * tag: 'div'
 * autoMake: true
 
-Available methods:
+## Available methods ##
 * destroy
 
 ```coffeescript
