@@ -1,12 +1,12 @@
-# dependencies:
+# dependencies #
 
 * inflection ([google code](http://code.google.com/p/inflection-js/]))
 * persistence.js ([github](https://github.com/zefhemel/persistencejs]))
 * jQuery ([website](http://jquery.com/]))
 
-# Observable
+# Observable #
 
-Available methods:
+Available methods
 * on eventType, handler
 * off eventType, handler
 * trigger eventType, ..
@@ -14,63 +14,63 @@ Available methods:
 
 <code>
 class PlayerObservable extends Observable
-	x: 0
+  x: 0
 
-	constructor: ->
-		super
+  constructor: ->
+    super
 
-		@on 'change:x', ->
-			console.log 'x:' + x
+    @on 'change:x', ->
+      console.log 'x:' + x
 
-		@on 'stop', ->
-			console.log 'stop'
-			@off 'change:x'
-			@off 'stop'
+    @on 'stop', ->
+      console.log 'stop'
+      @off 'change:x'
+      @off 'stop'
 
-		@move()
+    @move()
 
-	mode: ->
-		timer = setInterval =>
-			if ++x is 100
-				@trigger 'stop'
-				clearInterval timer
+  mode: ->
+    timer = setInterval =>
+      if ++x is 100
+        @trigger 'stop'
+        clearInterval timer
 
-		, 100
+    , 100
 
 </code>
 
-# Application.Observable
+# Application.Observable #
 
 Available methods:
 * require typePluralized, name
 
 <code>
 class App extends Application
-	modules:
-		helpers:
-			'database'
-			'log'
-		models:
-			'avatar'
-			'player'
-			'team'
-		routers:
-			'main'
-		templates:
-			'home'
-		views:
-			'home'
-		controllers:
-			'home'
+  modules:
+    helpers:
+      'database'
+      'log'
+    models:
+      'avatar'
+      'player'
+      'team'
+    routers:
+      'main'
+    templates:
+      'home'
+    views:
+      'home'
+    controllers:
+      'home'
 
-	constructor: ->
-		super
-		@router = new MainRouter()
-		@router.startHistory()
+  constructor: ->
+    super
+    @router = new MainRouter()
+    @router.startHistory()
 
 </code>
 
-# Router.Observable
+# Router.Observable #
 
 Overridable settings:
 * routesMasks: {}
@@ -89,20 +89,20 @@ Available methods:
 
 <code>
 class exports.MainRouter extends Router
-	rules:
-		home: -> @loadPage new HomeController()
-		catalogue:
-			settings:
-				reverse:   true
-				recursive: false
-			'show/:id': (id) ->
-				@loadPage new CatalogueItemController(id)
+  rules:
+    home: -> @loadPage new HomeController()
+    catalogue:
+      settings:
+        reverse:   true
+        recursive: false
+      'show/:id': (id) ->
+        @loadPage new CatalogueItemController(id)
 
-	loadPage: (controller) ->
-		...
+  loadPage: (controller) ->
+    ...
 </code>
 
-# Model.Observable
+# Model.Observable #
 
 Available relationships:
 * has_many
@@ -114,31 +114,31 @@ Available options index:
 
 <code>
 class exports.PlayerModel extends Model
-	define {
-		'nickname': 'TEXT'
-	}, [
-		'has_one :team'
-		'has_one :avatar'
-	], [
-		'add_index :nickname, :unique => true'
-	]
+  define {
+    'nickname': 'TEXT'
+  }, [
+    'has_one :team'
+    'has_one :avatar'
+  ], [
+    'add_index :nickname, :unique => true'
+  ]
 
 class exports.TeamModel extends Model
-	define {
-		'name': 'TEXT'
-	}, [
-		'has_many :players'
-	]
+  define {
+    'name': 'TEXT'
+  }, [
+    'has_many :players'
+  ]
 
 class exports.AvatarModel extends Model
-	define {
-		'path': 'TEXT'
-	}, [
-		'belongs_to :player'
-	]
+  define {
+    'path': 'TEXT'
+  }, [
+    'belongs_to :player'
+  ]
 </code>
 
-# Controller.Observable
+# Controller.Observable #
 
 Overridable settings:
 * events: {}
@@ -151,22 +151,22 @@ Available methods:
 
 <code>
 class exports.HomeController extends Controller
-	events:
-		'#play click': 'onClickGame'
+  events:
+    '#play click': 'onClickGame'
 
-	viewClass: HomeView
+  viewClass: HomeView
 
-	constructor: ->
-		super
-		@view = new @viewClass()
-		@view.render().el.appendTo $('body')
-		@deleteEvents @view
+  constructor: ->
+    super
+    @view = new @viewClass()
+    @view.render().el.appendTo $('body')
+    @deleteEvents @view
 
-	onLeave: ->
-		@view.destroy()
+  onLeave: ->
+    @view.destroy()
 </code>
 
-# View.Observable
+# View.Observable #
 
 Overridable settings:
 * attributes: {}
@@ -179,15 +179,15 @@ Available methods:
 <code>
 
 class exports.HomeView extends View
-	attributes:
-		'data-role': 'page'
-		style: 'display:none'
+  attributes:
+    'data-role': 'page'
+    style: 'display:none'
 
-	tag: "div"
-	template: HomeTemplate
+  tag: "div"
+  template: HomeTemplate
 
-	render: ->
-		$(@el).html @template()
-		el
+  render: ->
+    $(@el).html @template()
+    el
 
 </code>
