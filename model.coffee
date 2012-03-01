@@ -5,7 +5,8 @@ root = exports ? this
 class root.Model extends root.Observable
 	@define = (@_columns, associations, indexes) ->
 		# got SomethingModel, need something
-		name = @name.slice(0, -5).toLowerCase() # @name is from coffeescript autogeneration
+		# @name is from coffeescript autogeneration
+		name = @name.slice(0, -5).toLowerCase()
 		@_entity = persistence.define name, _columns
 
 		@_createIndexes(indexes) if indexes?
@@ -38,7 +39,8 @@ class root.Model extends root.Observable
 		if associationType is 'hasMany'
 			associationProperty = associationProperty.pluralize()
 		else if associationType is 'hasOne' or associationType is 'belongsTo'
-			associationProperty = associationProperty.singularize().toString() # got a weird but with return of Object String
+			# got a weird but with return of Object String
+			associationProperty = associationProperty.singularize().toString()
 
 		associationModelName = (associationProperty.singularize() + "_model").camelize()
 
@@ -69,7 +71,10 @@ class root.Model extends root.Observable
 		# une assoc create a new property
 		if association.type isnt 'belongsTo'
 			if reverseAssociation?
-				@[association.type] association.property, association.model, reverseAssociation.property
+				@[association.type]
+					association.property,
+					association.model,
+					reverseAssociation.property
 
 			else
 				# create association without reverse prop

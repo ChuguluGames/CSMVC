@@ -22,8 +22,12 @@ class root.Application extends root.Observable
 
 	require: (typePluralized, name) ->
 		typeSingularized    = typePluralized.singularize()
-		splittedName        = name.split "."                           # accept sub classing: my_class.sub_class
-		moduleFileName      = splittedName[0] + "_" + typeSingularized # name of file should be my_class_type
-		modulePath          = typePluralized + "/" + moduleFileName    # file should be in types/
-		moduleClass         = (splittedName.join("_") + "_" + typeSingularized).camelize() # class name should be MyClassType
+		# accept sub classing: my_class.sub_class
+		splittedName        = name.split "."
+			# name of file should be my_class_type
+		moduleFileName      = splittedName[0] + "_" + typeSingularized
+		# file should be in types/
+		modulePath          = typePluralized + "/" + moduleFileName
+		# class name should be MyClassType
+		moduleClass         = (splittedName.join("_") + "_" + typeSingularized).camelize()
 		window[moduleClass] = require(modulePath)[moduleClass]

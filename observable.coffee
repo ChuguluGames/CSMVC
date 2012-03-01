@@ -25,9 +25,11 @@ class root.Observable
 				@_subscribers[eventType].splice(key, 1)
 
 	trigger: (eventType) ->
-		return if not @_subscribers[eventType]? # no subscribers
+		# no subscribers
+		return if not @_subscribers[eventType]?
 
-		args = Array.prototype.slice.call(arguments) # convert the arguments list into an array
+		# convert the arguments list into an array
+		args = Array.prototype.slice.call(arguments)
 		args.shift() # remove the event type from the array
 
 		# tell about the event for each subscriber
@@ -42,7 +44,7 @@ class root.Observable
 
 		@__defineSetter__(prop, (newVal) ->
 			@["_" + prop] = newVal
-			handler.call(@, "change:" + prop, prop, oldVal, newVal)
+			handler.call(@, "change:" + prop, newVal, oldVal)
 		)
 
 		@__defineGetter__(prop, ->
