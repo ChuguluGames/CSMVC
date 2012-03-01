@@ -12,7 +12,7 @@ Available methods
 * trigger eventType, ..
 * watch prop, handler
 
-<code>
+```coffeescript
 class PlayerObservable extends Observable
   x: 0
 
@@ -37,14 +37,14 @@ class PlayerObservable extends Observable
 
     , 100
 
-</code>
+```
 
 # Application.Observable #
 
 Available methods:
 * require typePluralized, name
 
-<code>
+```coffeescript
 class App extends Application
   modules:
     helpers:
@@ -68,7 +68,7 @@ class App extends Application
     @router = new MainRouter()
     @router.startHistory()
 
-</code>
+```
 
 # Router.Observable #
 
@@ -87,7 +87,7 @@ Available methods:
 * refresh
 * dispatch route
 
-<code>
+```coffeescript
 class exports.MainRouter extends Router
   rules:
     home: -> @loadPage new HomeController()
@@ -100,7 +100,7 @@ class exports.MainRouter extends Router
 
   loadPage: (controller) ->
     ...
-</code>
+```
 
 # Model.Observable #
 
@@ -112,7 +112,7 @@ Available relationships:
 Available options index:
 * unique
 
-<code>
+```coffeescript
 class exports.PlayerModel extends Model
   define {
     'nickname': 'TEXT'
@@ -136,7 +136,7 @@ class exports.AvatarModel extends Model
   }, [
     'belongs_to :player'
   ]
-</code>
+```
 
 # Controller.Observable #
 
@@ -149,7 +149,7 @@ Available methods:
 * delegateEvent selector, context, eventName, handler, action = 'on'
 * delegateNewEvent selector, context, eventName, method, action = 'on'
 
-<code>
+```coffeescript
 class exports.HomeController extends Controller
   events:
     '#play click': 'onClickGame'
@@ -164,7 +164,7 @@ class exports.HomeController extends Controller
 
   onLeave: ->
     @view.destroy()
-</code>
+```
 
 # View.Observable #
 
@@ -176,7 +176,7 @@ Overridable settings:
 Available methods:
 * destroy
 
-<code>
+```coffeescript
 
 class exports.HomeView extends View
   attributes:
@@ -190,4 +190,4 @@ class exports.HomeView extends View
     $(@el).html @template()
     el
 
-</code>
+```
