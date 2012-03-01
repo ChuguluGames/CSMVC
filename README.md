@@ -1,3 +1,7 @@
+# description #
+
+CSMVC is a little MVC framework.
+
 # dependencies #
 
 * inflection ([google code](http://code.google.com/p/inflection-js/]))
@@ -7,10 +11,10 @@
 # Observable #
 
 ## Available methods ##
-* on eventType, handler
-* off eventType, handler
-* trigger eventType, ..
-* watch prop, handler
+* on (eventType, handler)
+* off (eventType, handler)
+* trigger (eventType, ..)
+* watch (prop, handler)
 
 ```coffeescript
 class PlayerObservable extends Observable
@@ -82,10 +86,10 @@ class App extends Application
 
 ## Available methods ##
 * startHistory
-* setRoute route
+* setRoute (route)
 * getRoute
 * refresh
-* dispatch route
+* dispatch (route)
 
 ```coffeescript
 class exports.MainRouter extends Router
@@ -144,10 +148,10 @@ class exports.AvatarModel extends Model
 * events: {}
 
 ## Available methods ##
-* addEvent selector, eventName, method
-* delegateEvents context, action = 'on'
-* delegateEvent selector, context, eventName, handler, action = 'on'
-* delegateNewEvent selector, context, eventName, method, action = 'on'
+* addEvent (selector, eventName, method)
+* delegateEvents (context, action = 'on')
+* delegateEvent (selector, context, eventName, handler, action = 'on')
+* delegateNewEvent (selector, context, eventName, method, action = 'on')
 
 ```coffeescript
 class exports.HomeController extends Controller
