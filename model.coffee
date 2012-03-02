@@ -71,10 +71,11 @@ class root.Model extends root.Observable
 		# une assoc create a new property
 		if association.type isnt 'belongsTo'
 			if reverseAssociation?
-				@[association.type]
+				@[association.type](
 					association.property,
 					association.model,
 					reverseAssociation.property
+				)
 
 			else
 				# create association without reverse prop
