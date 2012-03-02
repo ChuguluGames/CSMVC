@@ -118,6 +118,9 @@ class root.Router extends root.Observable
 		currentRoute = @getRoute()
 		@dispatch currentRoute
 
+	back: ->
+		window.history.back()
+
 	dispatch: (route) ->
 		rules = @_findMathedRulesForRoute route
 
