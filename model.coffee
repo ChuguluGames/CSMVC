@@ -2,74 +2,144 @@ root = exports ? this
 
 # dependencies: persistencejs, inflection
 
+# has many balls
+# has one ball
+# is a question
+# firstname is unique
+# has an index on firstname
+# belongs to a team
+
 class root.Model extends root.Observable
-	@define = (@_columns, associations, indexes) ->
-		# got SomethingModel, need something
-		# @name is from coffeescript autogeneration
-		name = @name.slice(0, -5).toLowerCase()
-		@_entity = persistence.define name, _columns
+	# -- static --
 
-		@_createIndexes(indexes) if indexes?
+	@define = (@_columns, @_options = []) ->
+		@_name = @name.slice(0, -5).toLowerCase()
 
-		$.extend @, @_entity
-
+		@_isMixin = false
 		@_defined = false
-		@_associationsComputed = []
+		@_associations = []
+		@_indexes = []
 
-		@_associationsCount = if associations? then associations.length else 0
+		@_processOptions()
+
+		@_onReady()
+
+	@_onReady = ->
+
+		if @_isMixin
+			defineMethod = 'defineMixin'
+		else defineMethod = 'define'
+
+		@_entity = persistence[defineMethod] @_name, @_columns
+
+		$.extend @, @_entity # merge entity constructor
+
+		@_processAssociations()
+		@_processIndexes()
+
+	@_processOptions = ->
+		return @_triggerDefinition() if @_options.length is 0
+
+		regexes = {
+			mixin      : new RegExp 'is polymorphic'
+			isA        : new RegExp 'is an? ([a-zA-Z_]+)'
+			hasMany    : new RegExp 'has many ([a-zA-Z_]+)'
+			hasOne     : new RegExp 'has one ([a-zA-Z_]+)'
+			belongsTo  : new RegExp 'belongs to an? ([a-zA-Z_]+)'
+			index      : new RegExp 'has an index on ([a-zA-Z_]+)'
+			uniqueIndex: new RegExp '([a-zA-Z_]+) is unique'
+		}
+
+		for option in @_options
+			for type, regex of regexes
+				if regex.test(option)
+					matches = option.match regex
+					if matches.length > 0
+						matches.shift()
+						@["_" + type] matches.shift()
+
+					else
+						@["_" + type]()
+
+	@_mixin = ->
+		@_isMixin = true
+
+	@_isA = (property) ->
+		@_associations.push
+			type       : 'is'
+			property   : property
+
+	@_hasMany = (property) ->
+		@_associations.push
+			type    : 'hasMany'
+			property: property
+
+	@_hasOne = (property) ->
+		@_associations.push
+			type    : 'hasOne'
+			property: property
+
+	@_belongsTo = (property) ->
+		@_associations.push
+			type    : 'belongsTo'
+			property: property
+
+	@_uniqueIndex = (property) ->
+		@_index property, {unique: true}
+
+	@_index = (property, params = {}) ->
+		@_indexes.push
+			property: property
+			params  : params
+
+	@_processAssociations = ->
 		@_associationsDefinedCount = 0
-
-		# add relationships
-		if @_associationsCount > 0
-			for association in associations
-				do (association) =>
-					@_processAssociation association
-
-		else
-			@_triggerDefinition()
+		for association in @_associations
+			@_processAssociation association
 
 	@_processAssociation = (association) ->
-		regex = new RegExp '([a-z_]+) (:[a-zA-Z_]+)'
 
-		matches = association.match regex
-		matches.shift()
-		associationType = (matches.shift()).camelize(true)
-		associationProperty = matches.shift().substr(1)
+		if association.type is 'hasMany'
+			association.property = association.property.pluralize()
 
-		if associationType is 'hasMany'
-			associationProperty = associationProperty.pluralize()
-		else if associationType is 'hasOne' or associationType is 'belongsTo'
-			# got a weird but with return of Object String
-			associationProperty = associationProperty.singularize().toString()
+		else if association.type is 'hasOne' or association.type is 'belongsTo' or association.type is 'is'
+			# got a weird bug with return of Object String
+			association.property = association.property.singularize().toString()
 
-		associationModelName = (associationProperty.singularize() + "_model").camelize()
-
-		associationModel = window[associationModelName]
-
-		associationComputed =
-			type      : associationType
-			property  : associationProperty
-			model_name: associationModelName
-
-		@_associationsComputed.push associationComputed
+		association.modelName = (association.property.singularize() + "_model").camelize()
+		association.model = window[association.modelName]
 
 		callback = (model) =>
-			associationComputed.model = model
+			association.model = model
 			reverseAssociation = model.getReverseAssociationForModel @name
-			@_createAssociation associationComputed, reverseAssociation
 
-		if associationModel? and associationModel.isDefined()
-			callback associationModel
+			@_createAssociation association, reverseAssociation
+
+		if association.type is 'is'
+
+			callback = (mixin) =>
+				callbackSelfDefinition = (model) =>
+					model.is mixin
+
+				if @isDefined()
+					callbackSelfDefinition @
+
+				# wait until self is ready
+				else @_waitUntilTrigger @name, callbackSelfDefinition
+
+		if association.model? and association.model.isDefined()
+			callback association.model
 
 		# wait for full model definition
-		else $(window).on associationModelName + '_defined', (event, model) => callback model
+		else @_waitUntilTrigger association.modelName, callback
 
-		if ++@_associationsDefinedCount is @_associationsCount
+		if ++@_associationsDefinedCount is @_associations.length
 			@_triggerDefinition()
 
 	@_createAssociation = (association, reverseAssociation) ->
-		# une assoc create a new property
+		# belongs to doesn't require any relationship
 		if association.type isnt 'belongsTo'
+
 			if reverseAssociation?
 				@[association.type](
 					association.property,
@@ -81,52 +151,57 @@ class root.Model extends root.Observable
 				# create association without reverse prop
 				@[association.type] association.property, association.model, null
 
+	@getReverseAssociationForModel = (modelName) ->
+		for association in @_associations
+			# console.log association.property
+			if association.modelName is modelName
+				return association
+		null
+
+	@_processIndexes = ->
+		for index in @_indexes
+			@_entity.index index.property, index.params
+
 	@_triggerDefinition = ->
 		@_defined = true
 		$(window).trigger @name + "_defined", @
 
-	@_createIndexes = (indexes) ->
-
-		regexColumn = new RegExp 'add_index :([a-z_]+)'
-		regexParams = new RegExp ':([a-z_]+) => ([a-z]+)'
-
-		for index in indexes
-			split = index.split ','
-
-			matches = split.shift().match regexColumn
-			column = matches[1]
-
-			params = {}
-			for part in split
-				matches = part.match regexParams
-				params[matches[1]] = matches[2]
-
-			@_entity.index column, params
-
-	@getReverseAssociationForModel = (modelName) ->
-		for association in @_associationsComputed
-			# console.log association.property
-			if association.model_name is modelName
-				return association
-		null
+	@_waitUntilTrigger = (name, callback) ->
+		handler = (event, model) =>
+			$(window).off name + '_defined', handler
+			callback model
+		$(window).on name + '_defined', handler
 
 	@isDefined = ->
 		@_defined
-	#
+
+	@getColumns = ->
+		@_columns
+
+	@getAssociations = ->
+		@_associations
+
+	# -- static --
+
 	constructor: (attributes) ->
 		@_entity = new @constructor._entity(attributes)
-		$.extend @, @_entity
+		$.extend @, @_entity # merge prototype methods
 
-		for association in @constructor._associationsComputed
-			@_addGetterAndSetter association.property
+		# add getter/setter on each columns of the entity
+		for property, type in @constructor.getColumns()
+			@_addGetterAndSetter property, @_entity
 
-	_addGetterAndSetter: (property) ->
+		# add getter/stter on each association of the entity
+		for association in @constructor.getAssociations()
+			@_addGetterAndSetter association.property, @_entity
+
+	_addGetterAndSetter: (property, element) ->
 	  Object.defineProperty @, property,
 	    get: ->
-	      @_entity[property]
+	      element[property]
 	    ,
 	    set: (value) ->
-	    	@_entity[property] = value
+	    	element[property] = value
 	    ,
 	    enumerable: true,
 	    configurable: true
