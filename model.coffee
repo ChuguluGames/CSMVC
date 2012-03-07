@@ -9,6 +9,13 @@ root = exports ? this
 # has an index on firstname
 # belongs to a team
 
+# stuff has one media as problem
+# media belongs to stuff as problem
+# stuff has many medias as problems
+
+# donc on doit trouver stuff, problem
+# roblem est la reverse property, donc pas beosin de checker la reverse
+
 class root.Model extends root.Observable
 	# -- static --
 
@@ -43,9 +50,9 @@ class root.Model extends root.Observable
 		regexes = {
 			mixin      : new RegExp 'is polymorphic'
 			isA        : new RegExp 'is an? ([a-zA-Z_]+)'
-			hasMany    : new RegExp 'has many ([a-zA-Z_]+)'
-			hasOne     : new RegExp 'has one ([a-zA-Z_]+)'
-			belongsTo  : new RegExp 'belongs to an? ([a-zA-Z_]+)'
+			hasMany    : new RegExp 'has many ([a-zA-Z_]+)( as ([a-zA-Z_]+))?'
+			hasOne     : new RegExp 'has one ([a-zA-Z_]+)( as ([a-zA-Z_]+))?'
+			belongsTo  : new RegExp 'belongs to an? ([a-zA-Z_]+)( as ([a-zA-Z_]+))?'
 			index      : new RegExp 'has an index on ([a-zA-Z_]+)'
 			uniqueIndex: new RegExp '([a-zA-Z_]+) is unique'
 		}
@@ -56,7 +63,7 @@ class root.Model extends root.Observable
 					matches = option.match regex
 					if matches.length > 0
 						matches.shift()
-						@["_" + type] matches.shift()
+						@["_" + type].apply @, matches
 
 					else
 						@["_" + type]()
@@ -66,23 +73,33 @@ class root.Model extends root.Observable
 
 	@_isA = (property) ->
 		@_associations.push
-			type       : 'is'
-			property   : property
+		arguments.unshift 'is'
+		@_addAssociation.apply @, arguments
 
-	@_hasMany = (property) ->
-		@_associations.push
-			type    : 'hasMany'
-			property: property
+	@_hasMany = ->
+		arguments.unshift 'hasMany'
+		@_addAssociation.apply @, arguments
 
-	@_hasOne = (property) ->
-		@_associations.push
-			type    : 'hasOne'
-			property: property
+	@_hasOne = ->
+		arguments.unshift 'hasOne'
+		@_addAssociation.apply @, arguments
 
 	@_belongsTo = (property) ->
+		arguments.unshift 'belongsTo'
+		@_addAssociation.apply @, arguments
+
+	@_addAssociation = ->
+		if arguments.length is 4
+			property = arguments[3]
+			modelName = arguments[1]
+		else
+			property = arguments[1]
+			modelName = null
+
 		@_associations.push
-			type    : 'belongsTo'
-			property: property
+			type     : arguments[0]
+			property : property
+			modelName: modelName
 
 	@_uniqueIndex = (property) ->
 		@_index property, {unique: true}
