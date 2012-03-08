@@ -2,25 +2,21 @@ root = exports ? this
 
 # dependencies: persistencejs, inflection
 
-# has many balls
-# has one ball
-# is a question
-# firstname is unique
-# has an index on firstname
-# belongs to a team
-
-# stuff has one media as problem
-# media belongs to stuff as problem
-# stuff has many medias as problems
-
-# donc on doit trouver stuff, problem
-# roblem est la reverse property, donc pas beosin de checker la reverse
+# has many XXX
+# has many XXX as YYY
+# has one XXX
+# has one XXX as YYY
+# belongs to a XXX
+# belongs to XXX as YYY
+# is a XXX
+# XXX is unique
+# has an index on XXX
 
 class root.Model extends root.Observable
 	# -- static --
 
 	@define = (@_columns, @_options = []) ->
-		@_name = @name.slice(0, -5).toLowerCase()
+		@_name = @name.slice(0, -5).underscore()
 
 		@_isMixin = false
 		@_defined = false
@@ -30,6 +26,9 @@ class root.Model extends root.Observable
 		@_processOptions()
 
 		@_onReady()
+
+		@_processAssociations()
+		@_processIndexes()
 
 	@_onReady = ->
 
@@ -41,11 +40,8 @@ class root.Model extends root.Observable
 
 		$.extend @, @_entity # merge entity constructor
 
-		@_processAssociations()
-		@_processIndexes()
-
 	@_processOptions = ->
-		return @_triggerDefinition() if @_options.length is 0
+		return if @_options.length is 0
 
 		regexes = {
 			mixin      : new RegExp 'is polymorphic'
@@ -72,26 +68,29 @@ class root.Model extends root.Observable
 		@_isMixin = true
 
 	@_isA = (property) ->
-		@_associations.push
-		arguments.unshift 'is'
-		@_addAssociation.apply @, arguments
+		args = Array.prototype.slice.call arguments
+		args.unshift 'is'
+		@_addAssociation.apply @, args
 
 	@_hasMany = ->
-		arguments.unshift 'hasMany'
-		@_addAssociation.apply @, arguments
+		args = Array.prototype.slice.call arguments
+		args.unshift 'hasMany'
+		@_addAssociation.apply @, args
 
 	@_hasOne = ->
-		arguments.unshift 'hasOne'
-		@_addAssociation.apply @, arguments
+		args = Array.prototype.slice.call arguments
+		args.unshift 'hasOne'
+		@_addAssociation.apply @, args
 
 	@_belongsTo = (property) ->
-		arguments.unshift 'belongsTo'
-		@_addAssociation.apply @, arguments
+		args = Array.prototype.slice.call arguments
+		args.unshift 'belongsTo'
+		@_addAssociation.apply @, args
 
 	@_addAssociation = ->
-		if arguments.length is 4
+		if arguments.length is 4 and arguments[3]? and arguments[1]?
 			property = arguments[3]
-			modelName = arguments[1]
+			modelName = @_generateModelName arguments[1]
 		else
 			property = arguments[1]
 			modelName = null
@@ -123,7 +122,9 @@ class root.Model extends root.Observable
 			# got a weird bug with return of Object String
 			association.property = association.property.singularize().toString()
 
-		association.modelName = (association.property.singularize() + "_model").camelize()
+		if not association.modelName
+			association.modelName = @_generateModelName association.property
+
 		association.model = window[association.modelName]
 
 		callback = (model) =>
@@ -156,7 +157,6 @@ class root.Model extends root.Observable
 	@_createAssociation = (association, reverseAssociation) ->
 		# belongs to doesn't require any relationship
 		if association.type isnt 'belongsTo'
-
 			if reverseAssociation?
 				@[association.type](
 					association.property,
@@ -170,7 +170,6 @@ class root.Model extends root.Observable
 
 	@getReverseAssociationForModel = (modelName) ->
 		for association in @_associations
-			# console.log association.property
 			if association.modelName is modelName
 				return association
 		null
@@ -188,6 +187,9 @@ class root.Model extends root.Observable
 			$(window).off name + '_defined', handler
 			callback model
 		$(window).on name + '_defined', handler
+
+	@_generateModelName = (name) ->
+		(name.singularize() + "_model").camelize()
 
 	@isDefined = ->
 		@_defined
