@@ -30,6 +30,8 @@ class root.Model extends root.Observable
 		@_processAssociations()
 		@_processIndexes()
 
+		@_triggerDefinition()
+
 	@_onReady = ->
 
 		if @_isMixin
@@ -109,7 +111,6 @@ class root.Model extends root.Observable
 			params  : params
 
 	@_processAssociations = ->
-		@_associationsDefinedCount = 0
 		for association in @_associations
 			@_processAssociation association
 
@@ -130,7 +131,6 @@ class root.Model extends root.Observable
 		callback = (model) =>
 			association.model = model
 			reverseAssociation = model.getReverseAssociationForModel @name
-
 			@_createAssociation association, reverseAssociation
 
 		if association.type is 'is'
@@ -149,10 +149,9 @@ class root.Model extends root.Observable
 			callback association.model
 
 		# wait for full model definition
-		else @_waitUntilTrigger association.modelName, callback
-
-		if ++@_associationsDefinedCount is @_associations.length
-			@_triggerDefinition()
+		else
+			@_waitUntilTrigger association.modelName, (model) ->
+				callback(model)
 
 	@_createAssociation = (association, reverseAssociation) ->
 		# belongs to doesn't require any relationship
