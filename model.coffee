@@ -156,7 +156,7 @@ class root.Model extends root.Observable
 	@_createAssociation = (association, reverseAssociation) ->
 		# belongs to doesn't require any relationship
 		if association.type isnt 'belongsTo'
-			if reverseAssociation?
+			if reverseAssociation? and reverseAssociation.property?
 				@[association.type](
 					association.property,
 					association.model,
