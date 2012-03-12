@@ -11,20 +11,37 @@ root = exports ? this
 # is a XXX
 # XXX is unique
 # has an index on XXX
+# XXX is a foreign key for YYY in UUU as PPP
+# XXX is a foreign key for YYY in {UUU} as PPP
+
+class root.ModelRegexes
+	stringPattern = '[a-z_]+'
+	stringPatternSurrended = '(' + stringPattern + ')'
+	aliasRegex = '(?: as ' + stringPatternSurrended + ')?'
+	@regexesOptions =
+		mixin      : new RegExp '^is polymorphic$'
+		isA        : new RegExp '^is an? ' + stringPatternSurrended + '$', 'i'
+		hasMany    : new RegExp '^has many ' + stringPatternSurrended + '' + aliasRegex + '$', 'i'
+		hasOne     : new RegExp '^has one ' + stringPatternSurrended + '' + aliasRegex + '$', 'i'
+		belongsTo  : new RegExp '^belongs to an? ' + stringPatternSurrended + '' + aliasRegex + '$', 'i'
+		index      : new RegExp '^has an index on ' + stringPatternSurrended + '$', 'i'
+		uniqueIndex: new RegExp '^' + stringPatternSurrended + ' is unique$', 'i'
+		foreignKey : new RegExp '^' + stringPatternSurrended + ' is a foreign key for ' + stringPatternSurrended + '(?: with ' + stringPatternSurrended + ')? in (\{?' + stringPattern + '\}?)' + aliasRegex + '$', 'i'
 
 class root.Model extends root.Observable
 	# -- static --
 
 	@define = (@_columns, @_options = []) ->
-		@_name = @name.slice(0, -5).underscore()
+		@_class = @name.slice(0, -5)
+		@_name  = @_class.underscore()
 
-		@_isMixin = false
-		@_defined = false
+		@_isMixin      = false
+		@_defined      = false
 		@_associations = []
-		@_indexes = []
+		@_indexes      = []
+		@_foreignKeys  = []
 
 		@_processOptions()
-
 		@_onReady()
 
 		@_processAssociations()
@@ -34,37 +51,74 @@ class root.Model extends root.Observable
 
 	@_onReady = ->
 
-		if @_isMixin
-			defineMethod = 'defineMixin'
-		else defineMethod = 'define'
+		defineMethod = if @_isMixin then 'defineMixin' else 'define'
 
 		@_entity = persistence[defineMethod] @_name, @_columns
 
 		$.extend @, @_entity # merge entity constructor
 
+		@_overrideFindBy()
+
+	@_overrideFindBy = ->
+		oldFindBy = @findBy
+		@findBy = (property, value, callback) =>
+			oldFindBy property, value, (entity) =>
+				model = if entity? then new window[@name](entity) else null
+				callback(model)
+
 	@_processOptions = ->
 		return if @_options.length is 0
-
-		regexes = {
-			mixin      : new RegExp 'is polymorphic'
-			isA        : new RegExp 'is an? ([a-zA-Z_]+)'
-			hasMany    : new RegExp 'has many ([a-zA-Z_]+)( as ([a-zA-Z_]+))?'
-			hasOne     : new RegExp 'has one ([a-zA-Z_]+)( as ([a-zA-Z_]+))?'
-			belongsTo  : new RegExp 'belongs to an? ([a-zA-Z_]+)( as ([a-zA-Z_]+))?'
-			index      : new RegExp 'has an index on ([a-zA-Z_]+)'
-			uniqueIndex: new RegExp '([a-zA-Z_]+) is unique'
-		}
-
 		for option in @_options
-			for type, regex of regexes
+			# TODO: check if match + result length test faster than reg.test + string.match
+			for type, regex of ModelRegexes.regexesOptions
 				if regex.test(option)
 					matches = option.match regex
 					if matches.length > 0
 						matches.shift()
 						@["_" + type].apply @, matches
-
 					else
 						@["_" + type]()
+					break
+
+	# start static index methods
+
+	@_uniqueIndex = (property) ->
+		@_index property, {unique: true}
+
+	@_index = (property, params = {}) ->
+		@_indexes.push
+			property: property
+			params  : params
+
+	@_processIndexes = ->
+		@_entity.index(index.property, index.params) for index in @_indexes
+
+	# end static index methods
+
+	# start static foreign key methods
+
+	@_foreignKey = ->
+		foreignKey =
+			property       : arguments[0]
+			targetProperty : arguments[1]
+			targetTypeField: arguments[2]
+
+		# dynamic table name
+		if arguments[3]? and arguments[3].substr(0, 1) is '{'
+			foreignKey.targetTable = arguments[3]
+			foreignKey.targetModelName = null
+			foreignKey.aliasProperty = if arguments[4]? then arguments[4] else null
+
+		else
+			foreignKey.targetTable = arguments[3].singularize()
+			foreignKey.targetModelName = @generateModelName foreignKey.targetTable
+			foreignKey.aliasProperty = if arguments[4]? then arguments[4] else foreignKey.targetTable
+
+		@_foreignKeys.push foreignKey
+
+	# end static foreign key methods
+
+	# start static association methods
 
 	@_mixin = ->
 		@_isMixin = true
@@ -92,7 +146,7 @@ class root.Model extends root.Observable
 	@_addAssociation = ->
 		if arguments.length is 4 and arguments[3]? and arguments[1]?
 			property = arguments[3]
-			modelName = @_generateModelName arguments[1]
+			modelName = @generateModelName arguments[1]
 		else
 			property = arguments[1]
 			modelName = null
@@ -101,14 +155,6 @@ class root.Model extends root.Observable
 			type     : arguments[0]
 			property : property
 			modelName: modelName
-
-	@_uniqueIndex = (property) ->
-		@_index property, {unique: true}
-
-	@_index = (property, params = {}) ->
-		@_indexes.push
-			property: property
-			params  : params
 
 	@_processAssociations = ->
 		for association in @_associations
@@ -124,7 +170,7 @@ class root.Model extends root.Observable
 			association.property = association.property.singularize().toString()
 
 		if not association.modelName
-			association.modelName = @_generateModelName association.property
+			association.modelName = @generateModelName association.property
 
 		association.model = window[association.modelName]
 
@@ -149,9 +195,7 @@ class root.Model extends root.Observable
 			callback association.model
 
 		# wait for full model definition
-		else
-			@_waitUntilTrigger association.modelName, (model) ->
-				callback(model)
+		else @_waitUntilTrigger association.modelName, callback
 
 	@_createAssociation = (association, reverseAssociation) ->
 		# belongs to doesn't require any relationship
@@ -173,53 +217,109 @@ class root.Model extends root.Observable
 				return association
 		null
 
-	@_processIndexes = ->
-		for index in @_indexes
-			@_entity.index index.property, index.params
+	# end static association methods
 
 	@_triggerDefinition = ->
 		@_defined = true
-		$(window).trigger @name + "_defined", @
+		Observable.trigger @name + "_defined", @
 
 	@_waitUntilTrigger = (name, callback) ->
 		handler = (event, model) =>
-			$(window).off name + '_defined', handler
+			Observable.off name + '_defined', handler
 			callback model
-		$(window).on name + '_defined', handler
+		Observable.on name + '_defined', handler
 
-	@_generateModelName = (name) ->
+	@generateModelName = (name) ->
 		(name.singularize() + "_model").camelize()
 
-	@isDefined = ->
-		@_defined
-
-	@getColumns = ->
-		@_columns
-
-	@getAssociations = ->
-		@_associations
+	# start static getters
+	@isDefined       = -> @_defined
+	@getEntity       = -> @_entity
+	@getColumns      = -> @_columns
+	@getAssociations = -> @_associations
+	@getForeignKeys  = -> @_foreignKeys
+	@getClass        = -> @_class
+	# end static getters
 
 	# -- static --
 
 	constructor: (attributes) ->
-		@_entity = new @constructor._entity(attributes)
-		$.extend @, @_entity # merge prototype methods
+		constructorEntity = @constructor.getEntity()
+		# construct from an entity
+		if attributes._type? and constructorEntity.meta? and constructorEntity.meta.name? and attributes._type is constructorEntity.meta.name
+			@_entity = attributes
+		else
+			@_entity = new constructorEntity(attributes)
+
+		$.extend @, @_entity # merge entity
 
 		# add getter/setter on each columns of the entity
-		for property, type in @constructor.getColumns()
+		for property, type of @constructor.getColumns()
 			@_addGetterAndSetter property, @_entity
 
-		# add getter/stter on each association of the entity
+		# add getter/setter on each association of the entity
 		for association in @constructor.getAssociations()
 			@_addGetterAndSetter association.property, @_entity
 
 	_addGetterAndSetter: (property, element) ->
-	  Object.defineProperty @, property,
-	    get: ->
-	      element[property]
-	    ,
-	    set: (value) ->
-	    	element[property] = value
-	    ,
-	    enumerable: true,
-	    configurable: true
+		Object.defineProperty @, property,
+			get: ->
+				element[property]
+			,
+			set: (value) ->
+				element[property] = value
+			,
+			enumerable: true,
+			configurable: true
+
+	fetchAssociation: (property, callback) ->
+		regexReplace = /\{([a-z_]+)\}/gi
+
+		for foreignKey in @constructor.getForeignKeys()
+
+			# need to replace the key
+			if foreignKey.targetTable.substr(0, 1) is '{'
+				# replace the key with the value of the entity
+				targetTable = foreignKey.targetTable.replace regexReplace, (match) =>
+					key = match.substr 1, match.length - 2
+					@[key].underscore() # need to underscore => ModelClass = model_class
+
+				foreignKey.targetModelName = @constructor.generateModelName targetTable
+				foreignKey.aliasProperty ?= targetTable
+
+			# the foreign key is the on we're looking for
+			if foreignKey.aliasProperty is property
+
+				targetModelClass = window[foreignKey.targetModelName]
+				query = targetModelClass.all()
+				# get the entities that match the value
+				query = query.filter(foreignKey.targetProperty, '=', @[foreignKey.property])
+
+				# if polymorphic
+				if foreignKey.targetTypeField?
+					# get the entities that match the local model class
+					query = query.filter(foreignKey.targetTypeField, '=', @constructor.getClass())
+
+				# request a collection
+				if foreignKey.aliasProperty is foreignKey.aliasProperty.pluralize()
+					collection = []
+					query.list (entities) =>
+						if entities?
+							for entity in entities
+								collection.push new targetModelClass(entity)
+
+						@[foreignKey.aliasProperty] = collection # set the collection
+						callback collection
+
+				# request a simple entity
+				else
+					query.one (entity) =>
+						targetModel = if entity? then new targetModelClass(entity) else null
+						@[foreignKey.aliasProperty] = targetModel
+
+						callback targetModel
+
+				return
+
+		# fallback on fetch persistence method
+		@fetch property, callback

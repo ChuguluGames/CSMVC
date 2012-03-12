@@ -1,6 +1,21 @@
 root = exports ? this
 
 class root.Observable
+	@_observable = null
+	# start static methods
+	@on = (eventName, handler) ->
+		observable = @_observable ? new Observable()
+		observable.on eventName, handler
+
+	@off = (eventName, handler) ->
+		observable = @_observable ? new Observable()
+		observable.off eventName, handler
+
+	@trigger = (eventName, eventData) ->
+		observable = @_observable ? new Observable()
+		observable.trigger eventName, eventData
+	# end static methods
+
 	_subscribers: {}
 	_watchers   : {}
 
