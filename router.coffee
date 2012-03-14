@@ -1,9 +1,12 @@
 root = exports ? this
 
-class root.Router extends root.Observable
+class root.CSMVCRouter extends root.CSMVCObservable
 	routesMasks:
 		':id'      : '([0-9]+)'
 		':alphabet': '([a-zA-Z]+)'
+		':lower'   : '([a-z]+)'
+		':upper'   : '([A-Z]+)'
+		':varchar' : '([a-zA-Z0-9_-]+)'
 
 	rules     : {}
 	_rulesList: {}
@@ -14,8 +17,9 @@ class root.Router extends root.Observable
 		recursive      : true
 
 	_rulesSettings:
-		reverse  : false
-		recursive: true
+		reverse         : false
+		recursive       : true
+		stopAtFirstMatch: false
 
 	constructor: (options) ->
 		super
@@ -58,39 +62,46 @@ class root.Router extends root.Observable
 
 		@_addListener()
 
-	_generateRulesList: (rules, baseRule = "") ->
+	_generateRulesList: (rules, ruleParentObject = null) ->
 		_rulesList = []
 
 		for rule, params of rules
 			if rule isnt 'on' and rule isnt '_settings'
-				baseRule = if baseRule isnt "" then baseRule + "/" + rule else rule
-				regex = @_getRegex baseRule
 
-				ruleSettings = params._settings
+				ruleObject =
+					rule    : rule
+					fullRule: if ruleParentObject? then ruleParentObject.fullRule + "/" + rule else rule
+					level   : if ruleParentObject? then ruleParentObject.level + 1 else 0
+					parent  : ruleParentObject
+					settings: params.settings
+					params  : params
+
+				ruleObject.regex = @_getRegex ruleObject.fullRule
 
 				if typeof params is 'function'
-					_rulesList.push
-						settings: ruleSettings
-						regex   : regex
-						callback: params
+					ruleObject.callback = params
+					_rulesList.push ruleObject
 				else
 					if params.on? and typeof params.on is 'function'
-						_rulesList.push
-							settings: ruleSettings
-							regex   : regex
-							callback: params.on
+						ruleObject.callback = params.on
+						_rulesList.push ruleObject
 
-					# don't need to get the childs of it's not recursive (keep it otherwise in case of global reverse)
-					if not ruleSettings? or not ruleSettings.recursive? or ruleSettings.recursive
-						childs = @_generateRulesList params, baseRule
+		# reverse the list if the parent wants to
+		if ruleParentObject? and ruleParentObject.settings? and ruleParentObject.settings.reverse
+			_rulesList.reverse()
 
-						# reverse the childs
-						if ruleSettings? and ruleSettings.reverse
-							childs = childs.reverse()
+		__rulesList = []
+		# get the childs of each rule
+		for rule in _rulesList
+			__rulesList.push rule
+			# don't need to get the childs of it's not recursive (keep it otherwise in case of global reverse)
+			if not rule.settings? or not rule.settings.recursive? or rule.settings.recursive
+				childs = @_generateRulesList rule.params, rule
+				# merge the childs into the global list
+				__rulesList = __rulesList.concat(childs)
 
-						_rulesList = _rulesList.concat(childs)
-
-		_rulesList
+		_rulesList = null
+		__rulesList
 
 	_getRegex: (rule) ->
 		pattern = @_getPatternOfString rule
@@ -131,9 +142,16 @@ class root.Router extends root.Observable
 
 	_findMathedRulesForRoute: (route) ->
 		callbacks = []
+
 		for rule in @_rulesList
-			console.log rule.regex
 			if rule.regex.test(route)
+
+				# just want to match one child?
+				if rule.parent? and rule.parent.settings? and rule.parent.settings.stopAtFirstMatch
+					# already have one child matched
+					if rule.parent.hasOneChildMatched? and rule.parent.hasOneChildMatched
+						continue
+					else rule.parent.hasOneChildMatched = true
 
 				matches = route.match rule.regex
 				matches.shift() # keep just the matches
