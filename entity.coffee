@@ -14,7 +14,7 @@ root = exports ? this
 # XXX is a foreign key for YYY in UUU as PPP
 # XXX is a foreign key for YYY in {UUU} as PPP
 
-class root.ModelRegexes
+class root.EntityRegexes
 	stringPattern = '[a-z_]+'
 	stringPatternSurrended = '(' + stringPattern + ')'
 	aliasRegex = '(?: as ' + stringPatternSurrended + ')?'
@@ -28,7 +28,7 @@ class root.ModelRegexes
 		uniqueIndex: new RegExp '^' + stringPatternSurrended + ' is unique$', 'i'
 		foreignKey : new RegExp '^' + stringPatternSurrended + ' is a foreign key for ' + stringPatternSurrended + '(?: with ' + stringPatternSurrended + ')? in (\{?' + stringPattern + '\}?)' + aliasRegex + '$', 'i'
 
-class root.Model extends root.Observable
+class root.CSMVCEntity extends root.CSMVCObservable
 	# -- static --
 
 	@define = (@_columns, @_options = []) ->
@@ -53,24 +53,24 @@ class root.Model extends root.Observable
 
 		defineMethod = if @_isMixin then 'defineMixin' else 'define'
 
-		@_entity = persistence[defineMethod] @_name, @_columns
+		@_persistenceEntity = persistence[defineMethod] @_name, @_columns
 
-		$.extend @, @_entity # merge entity constructor
+		$.extend @, @_persistenceEntity # merge persistence entity constructor
 
 		@_overrideFindBy()
 
 	@_overrideFindBy = ->
 		oldFindBy = @findBy
 		@findBy = (property, value, callback) =>
-			oldFindBy property, value, (entity) =>
-				model = if entity? then new window[@name](entity) else null
-				callback(model)
+			oldFindBy property, value, (persistenceEntity) =>
+				entity = if entity? then new window[@name](persistenceEntity) else null
+				callback entity
 
 	@_processOptions = ->
 		return if @_options.length is 0
 		for option in @_options
 			# TODO: check if match + result length test faster than reg.test + string.match
-			for type, regex of ModelRegexes.regexesOptions
+			for type, regex of EntityRegexes.regexesOptions
 				if regex.test(option)
 					matches = option.match regex
 					if matches.length > 0
@@ -91,7 +91,7 @@ class root.Model extends root.Observable
 			params  : params
 
 	@_processIndexes = ->
-		@_entity.index(index.property, index.params) for index in @_indexes
+		@_persistenceEntity.index(index.property, index.params) for index in @_indexes
 
 	# end static index methods
 
@@ -106,12 +106,12 @@ class root.Model extends root.Observable
 		# dynamic table name
 		if arguments[3]? and arguments[3].substr(0, 1) is '{'
 			foreignKey.targetTable = arguments[3]
-			foreignKey.targetModelName = null
+			foreignKey.targetEntityName = null
 			foreignKey.aliasProperty = if arguments[4]? then arguments[4] else null
 
 		else
 			foreignKey.targetTable = arguments[3].singularize()
-			foreignKey.targetModelName = @generateModelName foreignKey.targetTable
+			foreignKey.targetEntityName = @generateEntityName foreignKey.targetTable
 			foreignKey.aliasProperty = if arguments[4]? then arguments[4] else foreignKey.targetTable
 
 		@_foreignKeys.push foreignKey
@@ -146,15 +146,15 @@ class root.Model extends root.Observable
 	@_addAssociation = ->
 		if arguments.length is 4 and arguments[3]? and arguments[1]?
 			property = arguments[3]
-			modelName = @generateModelName arguments[1]
+			entityName = @generateEntityName arguments[1]
 		else
 			property = arguments[1]
-			modelName = null
+			entityName = null
 
 		@_associations.push
 			type     : arguments[0]
 			property : property
-			modelName: modelName
+			entityName: entityName
 
 	@_processAssociations = ->
 		for association in @_associations
@@ -169,21 +169,21 @@ class root.Model extends root.Observable
 			# got a weird bug with return of Object String
 			association.property = association.property.singularize().toString()
 
-		if not association.modelName
-			association.modelName = @generateModelName association.property
+		if not association.entityName
+			association.entityName = @generateEntityName association.property
 
-		association.model = window[association.modelName]
+		association.entity = window[association.entityName]
 
-		callback = (model) =>
-			association.model = model
-			reverseAssociation = model.getReverseAssociationForModel @name
+		callback = (entity) =>
+			association.entity = entity
+			reverseAssociation = entity.getReverseAssociationForEntity @name
 			@_createAssociation association, reverseAssociation
 
 		if association.type is 'is'
 
 			callback = (mixin) =>
-				callbackSelfDefinition = (model) =>
-					model.is mixin
+				callbackSelfDefinition = (entity) =>
+					entity.is mixin
 
 				if @isDefined()
 					callbackSelfDefinition @
@@ -191,11 +191,11 @@ class root.Model extends root.Observable
 				# wait until self is ready
 				else @_waitUntilTrigger @name, callbackSelfDefinition
 
-		if association.model? and association.model.isDefined()
-			callback association.model
+		if association.entity? and association.entity.isDefined()
+			callback association.entity
 
-		# wait for full model definition
-		else @_waitUntilTrigger association.modelName, callback
+		# wait for full entity definition
+		else @_waitUntilTrigger association.entityName, callback
 
 	@_createAssociation = (association, reverseAssociation) ->
 		# belongs to doesn't require any relationship
@@ -203,17 +203,17 @@ class root.Model extends root.Observable
 			if reverseAssociation? and reverseAssociation.property?
 				@[association.type](
 					association.property,
-					association.model,
+					association.entity,
 					reverseAssociation.property
 				)
 
 			else
 				# create association without reverse prop
-				@[association.type] association.property, association.model, null
+				@[association.type] association.property, association.entity, null
 
-	@getReverseAssociationForModel = (modelName) ->
+	@getReverseAssociationForEntity = (entityName) ->
 		for association in @_associations
-			if association.modelName is modelName
+			if association.entityName is entityName
 				return association
 		null
 
@@ -221,16 +221,16 @@ class root.Model extends root.Observable
 
 	@_triggerDefinition = ->
 		@_defined = true
-		Observable.trigger @name + "_defined", @
+		CSMVCObservable.trigger @name + "_defined", @
 
 	@_waitUntilTrigger = (name, callback) ->
-		handler = (event, model) =>
+		handler = (event, entity) =>
 			Observable.off name + '_defined', handler
-			callback model
-		Observable.on name + '_defined', handler
+			callback entity
+		CSMVCObservable.on name + '_defined', handler
 
-	@generateModelName = (name) ->
-		(name.singularize() + "_model").camelize()
+	@generateEntityName = (name) ->
+		(name.singularize() + "_entity").camelize()
 
 	# start static getters
 	@isDefined       = -> @_defined
@@ -245,21 +245,21 @@ class root.Model extends root.Observable
 
 	constructor: (attributes) ->
 		constructorEntity = @constructor.getEntity()
-		# construct from an entity
+		# construct from an persistence entity
 		if attributes._type? and constructorEntity.meta? and constructorEntity.meta.name? and attributes._type is constructorEntity.meta.name
-			@_entity = attributes
+			@_persistenceEntity = attributes
 		else
-			@_entity = new constructorEntity(attributes)
+			@_persistenceEntity = new constructorEntity(attributes)
 
-		$.extend @, @_entity # merge entity
+		$.extend @, @_persistenceEntity # merge persistence entity
 
-		# add getter/setter on each columns of the entity
+		# add getter/setter on each columns of the persistence entity
 		for property, type of @constructor.getColumns()
-			@_addGetterAndSetter property, @_entity
+			@_addGetterAndSetter property, @_persistenceEntity
 
-		# add getter/setter on each association of the entity
+		# add getter/setter on each association of the persistence entity
 		for association in @constructor.getAssociations()
-			@_addGetterAndSetter association.property, @_entity
+			@_addGetterAndSetter association.property, @_persistenceEntity
 
 	_addGetterAndSetter: (property, element) ->
 		Object.defineProperty @, property,
@@ -272,32 +272,70 @@ class root.Model extends root.Observable
 			enumerable: true,
 			configurable: true
 
-	fetchAssociation: (property, callback) ->
+	fetchAssciationWithAllForOne: (association, callback) ->
+		@fetchAssociation association, (entity) ->
+			if entity?
+				entity.fetchAll callback
+			else
+				callback(@)
+
+	fetchAssciationWithAllForList: (association, callback) ->
+		@fetchAssociation association, (entities) ->
+			return callback() if not entities? or entities.length < 1
+			count = entities.length
+			countCallback = ->
+				return callback() if --count <= 0
+			for entity in entities
+				entity.fetchAll countCallback
+
+	fetchAll: (callback) ->
+		self=@
+		fks = @constructor.getForeignKeys()
+		return callback(self) if not fks? or fks.length < 1
+		count = fks.length
+		countCallback = ->
+			return callback(self) if --count <= 0
+		for foreignKey in fks
+			if foreignKey.aliasProperty is foreignKey.aliasProperty.pluralize()
+				@fetchAssciationWithAllForList foreignKey.aliasProperty, countCallback
+			else
+				@fetchAssciationWithAllForOne foreignKey.aliasProperty, countCallback
+
+	fetchAssociation: (property) ->
+		if typeof arguments[1] is 'function'
+			callback = arguments[1]
+			filters  = null
+		else if typeof arguments[1] is 'object'
+			filters  = arguments[1]
+			callback = arguments[2]
+
 		regexReplace = /\{([a-z_]+)\}/gi
 
 		for foreignKey in @constructor.getForeignKeys()
 
 			# need to replace the key
 			if foreignKey.targetTable.substr(0, 1) is '{'
-				# replace the key with the value of the entity
+				# replace the key with the value of the persistence entity
 				targetTable = foreignKey.targetTable.replace regexReplace, (match) =>
 					key = match.substr 1, match.length - 2
-					@[key].underscore() # need to underscore => ModelClass = model_class
+					@[key].underscore() # need to underscore => EntityClass = entity_class
 
-				foreignKey.targetModelName = @constructor.generateModelName targetTable
+				foreignKey.targetEntityName = @constructor.generateEntityName targetTable
 				foreignKey.aliasProperty ?= targetTable
 
 			# the foreign key is the on we're looking for
 			if foreignKey.aliasProperty is property
 
-				targetModelClass = window[foreignKey.targetModelName]
-				query = targetModelClass.all()
+				targetEntityClass = window[foreignKey.targetEntityName]
+				query = targetEntityClass.all()
 				# get the entities that match the value
 				query = query.filter(foreignKey.targetProperty, '=', @[foreignKey.property])
+				if filters?
+					query = query.filter.apply(query, filter) for filter in filters
 
 				# if polymorphic
 				if foreignKey.targetTypeField?
-					# get the entities that match the local model class
+					# get the entities that match the local entity class
 					query = query.filter(foreignKey.targetTypeField, '=', @constructor.getClass())
 
 				# request a collection
@@ -305,19 +343,19 @@ class root.Model extends root.Observable
 					collection = []
 					query.list (entities) =>
 						if entities?
-							for entity in entities
-								collection.push new targetModelClass(entity)
+							for persistenceEntity in entities
+								collection.push new targetEntityClass(persistenceEntity)
 
 						@[foreignKey.aliasProperty] = collection # set the collection
-						callback collection
+						callback.call @, collection
 
-				# request a simple entity
+				# request a simple persistence entity
 				else
-					query.one (entity) =>
-						targetModel = if entity? then new targetModelClass(entity) else null
-						@[foreignKey.aliasProperty] = targetModel
+					query.one (persistenceEntity) =>
+						targetEntity = if persistenceEntity? then new targetEntityClass(persistenceEntity) else null
+						@[foreignKey.aliasProperty] = targetEntity
 
-						callback targetModel
+						callback.call @, targetEntity
 
 				return
 
