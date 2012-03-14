@@ -2,7 +2,7 @@ root = exports ? this
 
 # dependencies: inflection
 
-class root.Application extends root.Observable
+class root.CSMVCApplication extends root.CSMVCObservable
 # modules:
 # 	models:
 # 		'my_model'
@@ -20,14 +20,24 @@ class root.Application extends root.Observable
 			for module in list
 				@require type, module
 
-	require: (typePluralized, name) ->
-		typeSingularized    = typePluralized.singularize()
+	require: (typePluralized, modulePath) ->
+		# We have to transform the SomethingUIController to SomethingUiController
+
+		typeSingularized          = typePluralized.singularize()
+		modulePathSplitted        = modulePath.split('/')
+		# take the last part of the sub path
+		name                      = modulePathSplitted.pop()
 		# accept sub classing: my_class.sub_class
-		splittedName        = name.split "."
-			# name of file should be my_class_type
-		moduleFileName      = splittedName[0] + "_" + typeSingularized
+		splittedName              = name.split '.'
+		# name of file should be my_class_type
+		moduleFileName            = splittedName.shift() + '_' + typeSingularized
 		# file should be in types/
-		modulePath          = typePluralized + "/" + moduleFileName
+		modulePathSplitted.unshift(typePluralized)
+		modulePath                = modulePathSplitted.join('/')
 		# class name should be MyClassType
-		moduleClass         = (splittedName.join("_") + "_" + typeSingularized).camelize()
-		window[moduleClass] = require(modulePath)[moduleClass]
+		moduleName                = if splittedName.length > 0 then splittedName.pop() + '_' + typeSingularized else moduleFileName
+		moduleClassName           = (moduleName).camelize()
+		window[moduleClassName]   = require(modulePath + '/' + moduleFileName)[moduleClassName]
+
+	getModule: (name) ->
+		window[name.camelize()]
