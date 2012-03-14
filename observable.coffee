@@ -1,18 +1,18 @@
 root = exports ? this
 
-class root.Observable
+class root.CSMVCObservable
 	@_observable = null
 	# start static methods
 	@on = (eventName, handler) ->
-		observable = @_observable ? new Observable()
+		observable = @_observable ? new CSMVCObservable()
 		observable.on eventName, handler
 
 	@off = (eventName, handler) ->
-		observable = @_observable ? new Observable()
+		observable = @_observable ? new CSMVCObservable()
 		observable.off eventName, handler
 
 	@trigger = (eventName, eventData) ->
-		observable = @_observable ? new Observable()
+		observable = @_observable ? new CSMVCObservable()
 		observable.trigger eventName, eventData
 	# end static methods
 

@@ -1,6 +1,6 @@
 root = exports ? this
 
-class root.View extends root.Observable
+class root.CSMVCView extends root.CSMVCObservable
 	attributes: {}
 	el        : null
 	autoMake  : true
