@@ -1,6 +1,6 @@
 root = exports ? this
 
-class root.Controller extends root.Observable
+class root.CSMVCController extends root.CSMVCObservable
 	_eventSplitter : /^(\S+)\s*(.*)$/
 	_handlersEvents: []
 
