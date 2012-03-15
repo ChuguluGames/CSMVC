@@ -41,3 +41,7 @@ class root.CSMVCApplication extends root.CSMVCObservable
 
 	getModule: (name) ->
 		window[name.camelize()]
+
+	getNewModule: (name) ->
+		module = @getModule name
+		new module()
