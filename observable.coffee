@@ -14,6 +14,10 @@ class root.CSMVCObservable
 	@trigger = (eventName, eventData) ->
 		observable = @_observable ? new CSMVCObservable()
 		observable.trigger eventName, eventData
+
+	@watch = (object, property, handler) ->
+		observable = @_observable ? new CSMVCObservable()
+		observable.watch property, handler, object
 	# end static methods
 
 	_subscribers: {}
@@ -24,9 +28,11 @@ class root.CSMVCObservable
 		@_watchers = {}
 
 	on: (eventType, handler) ->
-		prop = eventType.split(":")[1]
-		if not @_watchers[prop]?
-			@watch(prop, @trigger)
+		eventTypeSplitted = eventType.split(":")
+		if eventTypeSplitted.length > 1
+			property = eventTypeSplitted[1]
+			if not @_watchers[property]?
+				@watch(property, @trigger)
 
 		if not this._subscribers[eventType]?
 			@_subscribers[eventType] = []
@@ -52,16 +58,24 @@ class root.CSMVCObservable
 		for subscriber in subscribers
 			subscriber.apply(@, args)
 
-	watch: (prop, handler) ->
-		oldVal 	= @[prop];
+	watch: (property, handler, element = @) ->
+		@_watchers[property] = true
 
-		@_watchers[prop] = true
+		initialValue = element[property]
 
-		@__defineSetter__(prop, (newVal) ->
-			@["_" + prop] = newVal
-			handler.call(@, "change:" + prop, newVal, oldVal)
-		)
+		Object.defineProperty element, property,
+			get: ->
+				element["_" + property] || initialValue # when the property is define, the last property is erased
+			,
+			set: (newValue) ->
+				oldValue = element[property]
+				element["_" + property] = newValue
 
-		@__defineGetter__(prop, ->
-			return @["_" + prop]
-		)
+				handler.call(@, newValue, oldValue)
+				@trigger 'change:x', newValue, oldValue
+			,
+			# this property shows up during enumeration of the properties on the corresponding object
+			enumerable  : true,
+			# the type of this property descriptor may be changed and
+			# the property may be deleted from the corresponding object
+			configurable: true
