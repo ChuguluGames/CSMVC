@@ -1,6 +1,6 @@
 # description #
 
-CSMVC is a little MVC framework.
+CSMVC is a little MVC framework developped in CoffeeScript.
 
 # dependencies #
 
@@ -8,16 +8,21 @@ CSMVC is a little MVC framework.
 * persistence.js ([github](https://github.com/zefhemel/persistencejs]))
 * jQuery ([website](http://jquery.com/]))
 
-# Observable #
+# CSMVCObservable #
+
+## Available static methods ##
+* on (eventType, handler)
+* off (eventType, handler)
+* trigger (eventType, arguments..)
 
 ## Available methods ##
 * on (eventType, handler)
 * off (eventType, handler)
-* trigger (eventType, ..)
-* watch (prop, handler)
+* trigger (eventType, arguments..)
+* watch (property, handler)
 
 ```coffeescript
-class PlayerObservable extends Observable
+class PlayerObservable extends CSMVCObservable
   x: 0
 
   constructor: ->
@@ -43,13 +48,13 @@ class PlayerObservable extends Observable
 
 ```
 
-# Application.Observable #
+# CSMVCApplication < CSMVCObservable #
 
 ## Available methods ##
 * require typePluralized, name
 
 ```coffeescript
-class App extends Application
+class App extends CSMVCApplication
   modules:
     helpers:
       'database'
@@ -74,7 +79,7 @@ class App extends Application
 
 ```
 
-# Router.Observable #
+# CSMVCRouter < Observable #
 
 ## Overridable settings ##
 * routesMasks: {}
@@ -92,7 +97,7 @@ class App extends Application
 * dispatch (route)
 
 ```coffeescript
-class exports.MainRouter extends Router
+class exports.MainRouter extends CSMVCRouter
   rules:
     home: -> @loadPage new HomeController()
     catalogue:
@@ -106,43 +111,50 @@ class exports.MainRouter extends Router
     ...
 ```
 
-# Model.Observable #
+# CSMVCEntity < CSMVCObservable #
 
 ## Available relationships ##
-* has_many
-* has_one
-* belongs_to
+* has many XXX
+* has many XXX as YYY
+* has one XXX
+* has one XXX as YYY
+* belongs to a XXX
+* belongs to XXX as YYY
+* is a XXX
+* XXX is unique
+* has an index on XXX
+* XXX is a foreign key for YYY in UUU as PPP
+* XXX is a foreign key for YYY in {UUU} as PPP
 
 ## Available options index ##
 * unique
 
 ```coffeescript
-class exports.PlayerModel extends Model
+class exports.PlayerModel extends CSMVCEntity
   define {
     'nickname': 'TEXT'
   }, [
-    'has_one :team'
-    'has_one :avatar'
-  ], [
-    'add_index :nickname, :unique => true'
+    'has_one team'
+    'has_one avatar'
+    'nickname is unique'
   ]
 
-class exports.TeamModel extends Model
+class exports.TeamModel extends CSMVCEntity
   define {
     'name': 'TEXT'
   }, [
-    'has_many :players'
+    'has_many players'
   ]
 
-class exports.AvatarModel extends Model
+class exports.AvatarModel extends CSMVCEntity
   define {
     'path': 'TEXT'
   }, [
-    'belongs_to :player'
+    'belongs_to a player'
   ]
 ```
 
-# Controller.Observable #
+# CSMVCController < CSMVCObservable #
 
 ## Overridable settings ##
 * events: {}
@@ -154,7 +166,7 @@ class exports.AvatarModel extends Model
 * delegateNewEvent (selector, context, eventName, method, action = 'on')
 
 ```coffeescript
-class exports.HomeController extends Controller
+class exports.HomeController extends CSMVCController
   events:
     '#play click': 'onClickGame'
 
@@ -170,7 +182,7 @@ class exports.HomeController extends Controller
     @view.destroy()
 ```
 
-# View.Observable #
+# CSMVCView < CSMVCObservable #
 
 ## Overridable settings##
 * attributes: {}
@@ -182,7 +194,7 @@ class exports.HomeController extends Controller
 
 ```coffeescript
 
-class exports.HomeView extends View
+class exports.HomeView extends CSMVCView
   attributes:
     'data-role': 'page'
     style: 'display:none'
