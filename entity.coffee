@@ -32,7 +32,7 @@ class root.CSMVCEntity extends root.CSMVCObservable
 	# -- static --
 
 	@define = (@_columns, @_options = []) ->
-		@_class = @name.slice(0, -5)
+		@_class = @name.slice(0, -6)
 		@_name  = @_class.underscore()
 
 		@_isMixin      = false
@@ -62,8 +62,8 @@ class root.CSMVCEntity extends root.CSMVCObservable
 	@_overrideFindBy = ->
 		oldFindBy = @findBy
 		@findBy = (property, value, callback) =>
-			oldFindBy property, value, (persistenceEntity) =>
-				entity = if entity? then new window[@name](persistenceEntity) else null
+			oldFindBy property, value, (entity) =>
+				entity = if entity? then new window[@name](entity) else null
 				callback entity
 
 	@_processOptions = ->
@@ -233,18 +233,18 @@ class root.CSMVCEntity extends root.CSMVCObservable
 		(name.singularize() + "_entity").camelize()
 
 	# start static getters
-	@isDefined       = -> @_defined
-	@getEntity       = -> @_entity
-	@getColumns      = -> @_columns
-	@getAssociations = -> @_associations
-	@getForeignKeys  = -> @_foreignKeys
-	@getClass        = -> @_class
+	@isDefined            = -> @_defined
+	@getPersistenceEntity = -> @_persistenceEntity
+	@getColumns           = -> @_columns
+	@getAssociations      = -> @_associations
+	@getForeignKeys       = -> @_foreignKeys
+	@getClass             = -> @_class
 	# end static getters
 
 	# -- static --
 
 	constructor: (attributes) ->
-		constructorEntity = @constructor.getEntity()
+		constructorEntity = @constructor.getPersistenceEntity()
 		# construct from an persistence entity
 		if attributes._type? and constructorEntity.meta? and constructorEntity.meta.name? and attributes._type is constructorEntity.meta.name
 			@_persistenceEntity = attributes
@@ -282,20 +282,19 @@ class root.CSMVCEntity extends root.CSMVCObservable
 	fetchAssciationWithAllForList: (association, callback) ->
 		@fetchAssociation association, (entities) ->
 			return callback() if not entities? or entities.length < 1
-			count = entities.length
+			countEntities = entities.length
 			countCallback = ->
-				return callback() if --count <= 0
+				return callback() if --countEntities <= 0
 			for entity in entities
 				entity.fetchAll countCallback
 
 	fetchAll: (callback) ->
-		self=@
-		fks = @constructor.getForeignKeys()
-		return callback(self) if not fks? or fks.length < 1
-		count = fks.length
-		countCallback = ->
-			return callback(self) if --count <= 0
-		for foreignKey in fks
+		foreignKeys = @constructor.getForeignKeys()
+		return callback(@) if not foreignKeys? or foreignKeys.length < 1
+		countForeignKeys = foreignKeys.length
+		countCallback = =>
+			return callback(@) if --countForeignKeys <= 0
+		for foreignKey in foreignKeys
 			if foreignKey.aliasProperty is foreignKey.aliasProperty.pluralize()
 				@fetchAssciationWithAllForList foreignKey.aliasProperty, countCallback
 			else
@@ -310,9 +309,7 @@ class root.CSMVCEntity extends root.CSMVCObservable
 			callback = arguments[2]
 
 		regexReplace = /\{([a-z_]+)\}/gi
-
 		for foreignKey in @constructor.getForeignKeys()
-
 			# need to replace the key
 			if foreignKey.targetTable.substr(0, 1) is '{'
 				# replace the key with the value of the persistence entity
