@@ -1,6 +1,6 @@
 root = exports ? this
 
-class root.CSMVCObservable
+class root.CSMVCObservable extends Module
 	@_observable = null
 	# start static methods
 	@on = (eventName, handler) ->
@@ -27,6 +27,10 @@ class root.CSMVCObservable
 		@_subscribers = {}
 		@_watchers = {}
 
+	one: (eventType, handler) ->
+		@off(eventType) # first kill all previous handler
+			.on(eventType, handler) # add the new one
+
 	on: (eventType, handler) ->
 		eventTypeSplitted = eventType.split(":")
 		if eventTypeSplitted.length > 1
@@ -38,12 +42,15 @@ class root.CSMVCObservable
 			@_subscribers[eventType] = []
 
 		@_subscribers[eventType].push(handler)
+		@
 
 	off: (eventType, handler) ->
-		_subscribers = @_subscribers[eventType]
-		for key, subscriber in subscribers
-			if (handler? and subscriber is handler) or not handler?
-				@_subscribers[eventType].splice(key, 1)
+		subscribers = @_subscribers[eventType]
+		if subscribers?
+			for key, subscriber in subscribers
+				if (handler? and subscriber is handler) or not handler?
+					subscribers.splice(key, 1)
+		@
 
 	trigger: (eventType) ->
 		# no subscribers
