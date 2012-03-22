@@ -4,32 +4,38 @@ class root.CSMVCObservable extends Module
 	@_observable = null
 	# start static methods
 	@on = (eventName, handler) ->
-		observable = @_observable ? new CSMVCObservable()
-		observable.on eventName, handler
+		@_observable ?= new CSMVCObservable()
+		@_observable.on eventName, handler
 
 	@off = (eventName, handler) ->
-		observable = @_observable ? new CSMVCObservable()
-		observable.off eventName, handler
+		@_observable ?= new CSMVCObservable()
+		@_observable.off eventName, handler
 
 	@trigger = (eventName, eventData) ->
-		observable = @_observable ? new CSMVCObservable()
-		observable.trigger eventName, eventData
+		@_observable ?= new CSMVCObservable()
+		@_observable.trigger eventName, eventData
 
 	@watch = (object, property, handler) ->
-		observable = @_observable ? new CSMVCObservable()
-		observable.watch property, handler, object
+		@_observable ?= new CSMVCObservable()
+		@_observable.watch property, handler, object
 	# end static methods
 
-	_subscribers: {}
-	_watchers   : {}
+	_subscribers      : {}
+	_watchers         : {}
+	_definedProperties: []
 
 	constructor: ->
-		@_subscribers = {}
-		@_watchers = {}
+		@_subscribers       = {}
+		@_watchers          = {}
+		@_definedProperties = []
 
+	# bind one time and kill all previous handlers
 	one: (eventType, handler) ->
-		@off(eventType) # first kill all previous handler
-			.on(eventType, handler) # add the new one
+		@off(eventType) # first kill all previous handlers
+			.on(eventType, (data...) => # add the new one
+				handler.apply @, data
+				@off(eventType) # kill the handler when triggered
+			)
 
 	on: (eventType, handler) ->
 		eventTypeSplitted = eventType.split(":")
