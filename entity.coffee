@@ -224,8 +224,8 @@ class root.CSMVCEntity extends root.CSMVCObservable
 		CSMVCObservable.trigger @name + "_defined", @
 
 	@_waitUntilTrigger = (name, callback) ->
-		handler = (event, entity) =>
-			Observable.off name + '_defined', handler
+		handler = (entity) =>
+			CSMVCObservable.off name + '_defined', handler
 			callback entity
 		CSMVCObservable.on name + '_defined', handler
 
