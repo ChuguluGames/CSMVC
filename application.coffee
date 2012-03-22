@@ -23,6 +23,11 @@ class root.CSMVCApplication extends root.CSMVCObservable
 	require: (typePluralized, modulePath) ->
 		# We have to transform the SomethingUIController to SomethingUiController
 
+		isAClass = yes
+		if modulePath.substr(0, 1) is '#'
+			modulePath = modulePath.slice(1)
+			isAClass = no
+
 		typeSingularized          = typePluralized.singularize()
 		modulePathSplitted        = modulePath.split('/')
 		# take the last part of the sub path
@@ -37,7 +42,9 @@ class root.CSMVCApplication extends root.CSMVCObservable
 		# class name should be MyClassType
 		moduleName                = if splittedName.length > 0 then splittedName.pop() + '_' + typeSingularized else moduleFileName
 		moduleClassName           = (moduleName).camelize()
-		window[moduleClassName]   = require(modulePath + '/' + moduleFileName)[moduleClassName]
+
+		requireClass              = require(modulePath + '/' + moduleFileName)
+		window[moduleClassName]   = unless isAClass then requireClass else requireClass[moduleClassName]
 
 	getModule: (name) ->
 		window[name.camelize()]
