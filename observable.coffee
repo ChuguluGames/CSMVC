@@ -51,6 +51,11 @@ class root.CSMVCObservable extends Module
 		@
 
 	off: (eventType, handler) ->
+		# remove all
+		if not eventType? and not handler?
+			@_subscribers = {}
+			return
+
 		subscribers = @_subscribers[eventType]
 		if subscribers?
 			for key, subscriber in subscribers
@@ -74,8 +79,19 @@ class root.CSMVCObservable extends Module
 	watch: (property, handler, element = @) ->
 		@_watchers[property] = true
 
-		initialValue = element[property]
+		@defineProperty element, property, handler
 
+		@on 'change:' + property, handler
+
+	watchAndGet: (property, handler, element = @) ->
+		@watch.apply @, arguments
+		handler.call @, @[property]
+
+	defineProperty: (element, property, handler) ->
+		return for definedProperty in @_definedProperties when definedProperty is property
+
+		@_definedProperties.push property
+		initialValue = element[property]
 		Object.defineProperty element, property,
 			get: ->
 				element["_" + property] || initialValue # when the property is define, the last property is erased
@@ -84,8 +100,8 @@ class root.CSMVCObservable extends Module
 				oldValue = element[property]
 				element["_" + property] = newValue
 
-				handler.call(@, newValue, oldValue)
-				@trigger 'change:x', newValue, oldValue
+				handler.call @, newValue, oldValue
+				@trigger 'change:' + property, newValue, oldValue
 			,
 			# this property shows up during enumeration of the properties on the corresponding object
 			enumerable  : true,
