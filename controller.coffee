@@ -5,9 +5,11 @@ class root.CSMVCController extends root.CSMVCObservable
 	_handlersEvents: []
 
 	# events:
-	# 	'.selector event': 'myHandler'
-	# 	'.other_selector': 'myOtherHandler'
-	events         : {}
+	# 	event: '.selector' event'
+	# 	event: '.other_selector'
+	# will create @onEventSelector and @onEventOtherSelector
+	events: {}
+	delegateEventOnViewRendering: yes
 
 	constructor: (attributes) ->
 		super
@@ -16,35 +18,49 @@ class root.CSMVCController extends root.CSMVCObservable
 		@[prop] = attributes[prop] for prop of attributes
 		@_createHandlersEvents()
 
+		# watch if
+		if @delegateEventOnViewRendering
+			@watch 'view', (view) =>
+				if view?
+					view.on 'render', => @delegateEvents view.el
 		@
 
 	_createHandlersEvents: ->
-		for key, methodName of @events
-			do (key, methodName) =>
-				method = @[methodName]
-				match = key.match(@_eventSplitter)
-
-				@addEvent match[1], match[2], method
+		for eventName, selector of @events
+			do (eventName, selector) =>
+				@addEvent selector, eventName
 
 	addEvent: (selector, eventName, method) ->
-		handlerEvent =
+		# remove spaces, #, . -, well all weird character by an underscore
+		selectorUnderscored = selector.replace /[^a-z0-9]/gi, '_'
+		eventnameAndSelectorUnderscored = eventName.underscore() + '_' + selectorUnderscored
+
+		methodOffName = ('off_' + eventnameAndSelectorUnderscored).camelize(yes)
+
+		unless method?
+			methodOnName = ('on_' + eventnameAndSelectorUnderscored).camelize(yes)
+			method = @[methodOnName]
+
+		eventData =
 			eventName: eventName
 			selector : selector
 			handler  : (event) => method.call @, event
-		@_handlersEvents.push handlerEvent
-		handlerEvent
+
+		# create a method for remove the event
+		@[methodOffName] = => @removeEvent eventData
+
+		@_handlersEvents.push eventData
 
 	delegateEvents: (context, action = 'on') ->
-		for event in @_handlersEvents
-			@delegateEvent(event.selector, context, event.eventName, event.handler, action)
+		for eventData in @_handlersEvents
+			eventData.context = context
+			@delegateEvent(eventData, action)
 
-	delegateNewEvent: (selector, context, eventName, method, action = 'on') ->
-		handlerEvent = @addEvent selector, eventName, method
-		@delegateEvent selector, context, eventName, handlerEvent.handler, action
+	delegateEvent: (eventData, action = 'on') ->
+		$el = @getElement eventData.context, eventData.selector
+		$el[action](eventData.eventName, eventData.handler)
 
-	delegateEvent: (selector, context, eventName, handler, action = 'on') ->
-		console.log selector + " " + eventName + " " + action
-
+	getElement: (context, selector) ->
 		if not selector?
 			$el = $(context)
 		else if selector is 'document'
@@ -53,5 +69,14 @@ class root.CSMVCController extends root.CSMVCObservable
 			$el = $(window)
 		else
 			$el = $(selector, context)
+		$el
 
-		$el[action](eventName, handler)
+	removeEvents: (context) ->
+		if context
+			@delegateEvents context, 'off'
+		else
+			for eventData in @_handlersEvents
+				@removeEvent eventData
+
+	removeEvent: (eventData) ->
+		@delegateEvent eventData, 'off'
