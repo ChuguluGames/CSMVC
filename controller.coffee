@@ -18,11 +18,19 @@ class root.CSMVCController extends root.CSMVCObservable
 		@[prop] = attributes[prop] for prop of attributes
 		@_createHandlersEvents()
 
-		# watch if
 		if @delegateEventOnViewRendering
-			@watch 'view', (view) =>
+			handlerWatchView = (view) =>
+				# view defined
 				if view?
-					view.on 'render', => @delegateEvents view.el
+
+					hanlderOnViewRender = =>
+						view.off 'render', hanlderOnViewRender
+						@delegateEvents view.el
+
+					view.on 'render', hanlderOnViewRender
+					@unWatch 'view', handlerWatchView
+
+			@watch 'view', handlerWatchView
 		@
 
 	_createHandlersEvents: ->
@@ -61,7 +69,7 @@ class root.CSMVCController extends root.CSMVCObservable
 		$el[action](eventData.eventName, eventData.handler)
 
 	getElement: (context, selector) ->
-		if not selector?
+		unless selector?
 			$el = $(context)
 		else if selector is 'document'
 			$el = $(document)

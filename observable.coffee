@@ -1,6 +1,6 @@
 root = exports ? this
 
-class root.CSMVCObservable extends Module
+class root.CSMVCObservable extends CSMVCModule
 	@_observable = null
 	# start static methods
 	@on = (eventName, handler) ->
@@ -58,7 +58,7 @@ class root.CSMVCObservable extends Module
 
 		subscribers = @_subscribers[eventType]
 		if subscribers?
-			for key, subscriber in subscribers
+			for subscriber, key in subscribers
 				if (handler? and subscriber is handler) or not handler?
 					subscribers.splice(key, 1)
 		@
@@ -86,6 +86,10 @@ class root.CSMVCObservable extends Module
 	watchAndGet: (property, handler, element = @) ->
 		@watch.apply @, arguments
 		handler.call @, @[property]
+
+	unWatch: (property, handler) ->
+		if @_watchers[property]
+			@off 'change:' + property, handler
 
 	defineProperty: (element, property, handler) ->
 		return for definedProperty in @_definedProperties when definedProperty is property

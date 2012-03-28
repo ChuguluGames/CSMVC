@@ -1,7 +1,7 @@
 moduleKeywords = ['extended', 'included']
 root = exports ? this
 
-class root.Module
+class root.CSMVCModule
   # -- static --
   @extend: (module) ->
     for key, value of module when key not in moduleKeywords
@@ -11,21 +11,36 @@ class root.Module
     this
 
   @include: (module) ->
-    for key, value of module when key not in moduleKeywords
-      # Assign properties to the prototype
+    throw('include(module) requires module') unless module
+    for key, value of module.prototype when key not in ['included', 'extended', 'name']
       @::[key] = value
-      console.log key, value
 
-    module.included?.apply(@)
-    this
+    included = module.included
+    included.apply(this) if included
+    @
+
   # -- static --
+
+  include: (module, createANewInstance = no) ->
+    if createANewInstance
+      module = new module()
+    else module = module.prototype
+
+    throw('include(module) requires module') unless module
+    for key, value of module when key not in ['included', 'extended']
+      @[key] = value
+
+    # @authorizeAnswering()
+    included = module.included
+    included.apply(this) if included
+    @
 
   extend: (module) ->
     for key, value of module
       @[key] = value
     this
 
-  include: (module) ->
-    for key, value of new module
-      @[key] = value
-    this
+  # include: (module) ->
+  #   for key, value of module
+  #     @[key] = value
+  #   this
