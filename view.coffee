@@ -3,12 +3,14 @@ root = exports ? this
 # dependencies: inflection, jquery
 
 class root.CSMVCView extends root.CSMVCObservable
-	attributes: {}
-	template  : null
-	el        : null
-	autoMake  : true
-	tag       : "div"
-	container : null
+	attributes: {}    # attributes of view elements
+	template  : null  # template method of view element
+	autoMake  : true  # create view element on instanciation
+	tag       : "div" # tag of the view element
+	container : null  # container of the view element
+
+	el        : null # view element
+
 	_cache    : {}
 
 	constructor: (attributes) ->
@@ -22,29 +24,34 @@ class root.CSMVCView extends root.CSMVCObservable
 
 		@[property] = attributes[property] for property of attributes
 
+		# got a model and some data binding orders?
 		if @model? and @modelDataBinding?
 			@_initializeModelDataBinding()
 
 		@make() if @autoMake
 		@
 
+	# make view element
 	make: ->
 		@el = document.createElement(@tag)
 		$(@el).attr(@attributes)
 		@
 
+	# append view to container
 	append: ->
 		@container.append @el
 
+	# render view element
 	render: (data) ->
 		$(@el).html @template data
 		@trigger 'render'
 		@
 
+	# destroy view element
 	destroy: ->
-		@clearCache()
-		@_removeModelDataBinding()
-		$(@el).remove()
+		@_removeModelDataBinding() # remove model data binds
+		@clearCache()              # remove cached elements
+		$(@el).remove()            # remove element
 		@
 
 	# update an element
@@ -56,9 +63,11 @@ class root.CSMVCView extends root.CSMVCObservable
 			element = @getElement('.' + params, @el)
 			element.html value
 
+	# remove cached elements
 	clearCache: ->
 		@_cache = {}
 
+	# prepare model data model binding
 	_initializeModelDataBinding: ->
 		for property in @modelDataBinding
 			# match onSomething
@@ -68,6 +77,7 @@ class root.CSMVCView extends root.CSMVCObservable
 			else
 				@_watchModelProperty property
 
+	# remove all data model binding
 	_removeModelDataBinding: ->
 		for property in @modelDataBinding
 			# match onSomething
@@ -77,6 +87,8 @@ class root.CSMVCView extends root.CSMVCObservable
 			else
 				@_unWatchModelProperty property
 
+	# return @updateElement method
+	# if doesn't exist, return @update method
 	_getUpdateMethod: (property) ->
 		propertyUnderscored = property.underscore()
 		alias = 'update_' + propertyUnderscored
@@ -93,9 +105,12 @@ class root.CSMVCView extends root.CSMVCObservable
 
 		@_cache.updateMethods[alias]
 
+	# execute update element method
 	_execUpdateMethod: (property, value) ->
 		@_getUpdateMethod(property).call @, value
 
+	# return @onEvent methog
+	# if doesn't exist, return undefined
 	_getEventMethod: (event_type) ->
 		methodNameUnderscored = 'on_' + event_type
 		unless @_cache.eventMethods[methodNameUnderscored]?
@@ -106,24 +121,32 @@ class root.CSMVCView extends root.CSMVCObservable
 
 		@_cache.eventMethods[methodNameUnderscored]
 
+	# execute event method
 	_execEventMethod: (event_type, data...) ->
 		@_getEventMethod(event_type).apply @, data
 
+	# watch model property
 	_watchModelProperty: (property) ->
 		@model.watch property, (value) =>
 			@_execUpdateMethod property, value
 
+	# unwatch model property
+	_unWatchModelProperty: (property, handler) ->
+		@model.unWatch property, handler ? @_getUpdateMethod(property)
+
+	# watch model event
 	_watchModelEvent: (event_type) ->
 		@model.on event_type.camelize(yes), (data...) =>
 			@_execEventMethod.apply @, [event_type, data]
 
-	_unWatchModelProperty: (property, handler) ->
-		@model.unWatch property, handler ? @_getUpdateMethod(property)
-
+	# watch model event
 	_unWatchModelEvent: (event_type, handler) ->
 		@model.off event_type.camelize(yes), handler ? @_getEventMethod(event_type)
 
+	# get cached element
+	# if doesn't exist, return undefined
 	getElement: (selector, context = null, alias = selector) ->
+		# not cached yet
 		unless @_cache[alias]?
 			@_cache.elements[alias] = $(selector, context or @el)
 		else @_cache.elements[alias]

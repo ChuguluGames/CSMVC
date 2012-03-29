@@ -1,31 +1,64 @@
 root = exports ? this
 
+# TODO: add optional argument possibility for masks: :id?
+# TODO: add exactMatch option for route and global settings
+
 class root.CSMVCRouter extends root.CSMVCObservable
-	routesMasks:
-		':id'      : '([0-9]+)'
-		':alphabet': '([a-zA-Z]+)'
-		':lower'   : '([a-z]+)'
-		':upper'   : '([A-Z]+)'
-		':varchar' : '([a-zA-Z0-9_-]+)'
+	# default route masks
+	# see @addRouteMask for adding a mask
+	# see @removeRouteMask for adding a mask
+	_routesMasks:
+		':id'           : '([0-9]+)'
+		':numeric'      : '([0-9]+)'
+		':alphabet'     : '([a-zA-Z]+)'
+		':lower'        : '([a-z]+)'
+		':upper'        : '([A-Z]+)'
+		':varchar'      : '([a-zA-Z_-]+)'
+		':alphanumeric' : '([a-zA-Z0-9_-]+)'
+
+	# rules of routes
+	# rules:
+	# 	home: -> new HomeController().show()
+	# 	error:
+	# 		settings:
+	# 			reverse         : true # don't need unknown error
+	# 			stopAtFirstMatch: true # error/error404 won't pass :numeric mask
+	# 		on: ->
+	# 			# unknown error
+	# 			controller = new ErrorController()
+	# 			controller.display()
+
+	# 		':numeric': (code) ->
+	# 				controller = new ErrorController()
+	# 				controller.setErrorCode code
+	# 				controller.display()
+
+	# 		':alphanumeric': (errorType) ->
+
+	# 				controller = new ErrorController()
+	# 				controller.setErrorType errorType
+	# 				controller.display()
 
 	rules     : {}
+
 	_rulesList: {}
 
 	_settings:
-		redirectIfEmpty: true
-		reverse        : false
-		recursive      : true
+		redirectIfEmpty: true  # if no route, redirect on home
+		reverse        : false # global reverse binding routes
+		recursive      : true  # stop at first level route
 
 	_rulesSettings:
-		reverse         : false
-		recursive       : true
-		stopAtFirstMatch: false
+		reverse         : false # local reverse binding routes
+		recursive       : true  # stop at current level route
+		stopAtFirstMatch: false # stop at first child route match
 
+	# see @_settings, expect an optional object
 	constructor: (options) ->
 		super
 
 		# override defaults
-		@_settings = @_mergeObject @_settings, options
+		@_settings = @mergeObject @_settings, options
 
 		# generate the recursive list of the rules
 		@_rulesList = @_generateRulesList @rules
@@ -39,18 +72,14 @@ class root.CSMVCRouter extends root.CSMVCObservable
 		if @_settings.reverse
 			@_rulesList = @_rulesList.reverse()
 
-	_mergeObject: (defaultObject, overrideObject) ->
-		mergedObject = {}
+	# add route mask
+	addRouteMask: (alias, regexString) ->
+		@_routesMasks[':' + alias] = regexString
 
-		if defaultObject?
-			for key, option of defaultObject
-				mergedObject[key] = option
-
-		if overrideObject?
-			for key, option of overrideObject
-				mergedObject[key] = option
-
-		mergedObject
+	# remove route mask
+	removeRouteMask: (alias) ->
+		if @_routesMasks[':' + alias]?
+			delete @_routesMasks[':' + alias]
 
 	startHistory: ->
 		currentRoute = @getRoute()
@@ -100,7 +129,7 @@ class root.CSMVCRouter extends root.CSMVCObservable
 				# merge the childs into the global list
 				__rulesList = __rulesList.concat(childs)
 
-		_rulesList = null
+		_rulesList = null # delete reference from memory
 		__rulesList
 
 	_getRegex: (rule) ->
@@ -109,7 +138,7 @@ class root.CSMVCRouter extends root.CSMVCObservable
 		regex
 
 	_getPatternOfString: (string) ->
-		for mask, maskPattern of @routesMasks
+		for mask, maskPattern of @_routesMasks
 			regex = new RegExp mask, 'g'
 			string = string.replace regex, maskPattern
 
@@ -119,19 +148,24 @@ class root.CSMVCRouter extends root.CSMVCObservable
 		$(window).on 'hashchange', =>
 			@dispatch @getRoute()
 
+	# replace current hash
 	setRoute: (route) ->
 		window.location.hash = route
 
+	# return current hash
 	getRoute: ->
 		window.location.hash.substr(1) # get ride of the first /
 
+	# force binding of current route
 	refresh: ->
 		currentRoute = @getRoute()
 		@dispatch currentRoute
 
+	# go to previous hash
 	back: ->
-		window.history.back()
+		window.history.back() # use browser history.back method
 
+	# trigger and call each handler for matched routed
 	dispatch: (route) ->
 		rules = @_findMathedRulesForRoute route
 
@@ -140,6 +174,7 @@ class root.CSMVCRouter extends root.CSMVCObservable
 		for rule in rules
 			rule.callback.apply @, rule.matches
 
+	# find matched route for specified route
 	_findMathedRulesForRoute: (route) ->
 		callbacks = []
 
@@ -166,5 +201,6 @@ class root.CSMVCRouter extends root.CSMVCObservable
 
 		callbacks
 
+	# return true of a route is recursive or of global recusrsivity is enabled
 	_isRecursive: (ruleRecursivity, globalRecursivity) ->
 		(ruleRecursivity? and ruleRecursivity) or globalRecursivity

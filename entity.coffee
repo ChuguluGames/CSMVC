@@ -14,6 +14,7 @@ root = exports ? this
 # XXX is a foreign key for YYY in UUU as PPP
 # XXX is a foreign key for YYY in {UUU} as PPP
 
+# static class with all the entity options regex
 class root.EntityRegexes
 	stringPattern = '[a-z_]+'
 	stringPatternSurrended = '(' + stringPattern + ')'
@@ -255,31 +256,22 @@ class root.CSMVCEntity extends root.CSMVCObservable
 
 		# add getter/setter on each columns of the persistence entity
 		for property, type of @constructor.getColumns()
-			@_addGetterAndSetter property, @_persistenceEntity
+			@defineProperty @_persistenceEntity, property, no, no
 
 		# add getter/setter on each association of the persistence entity
 		for association in @constructor.getAssociations()
-			@_addGetterAndSetter association.property, @_persistenceEntity
+			@defineProperty @_persistenceEntity, association.property, no, no
 
-	_addGetterAndSetter: (property, element) ->
-		Object.defineProperty @, property,
-			get: ->
-				element[property]
-			,
-			set: (value) ->
-				element[property] = value
-			,
-			enumerable: true,
-			configurable: true
-
-	fetchAssciationWithAllForOne: (association, callback) ->
+	# fetch association
+	fetchAssociationWithAllForOne: (association, callback) ->
 		@fetchAssociation association, (entity) ->
 			if entity?
 				entity.fetchAll callback
 			else
 				callback(@)
 
-	fetchAssciationWithAllForList: (association, callback) ->
+	# fetch association as collection
+	fetchAssociationWithAllForList: (association, callback) ->
 		@fetchAssociation association, (entities) ->
 			return callback() if not entities? or entities.length < 1
 			countEntities = entities.length
@@ -288,6 +280,7 @@ class root.CSMVCEntity extends root.CSMVCObservable
 			for entity in entities
 				entity.fetchAll countCallback
 
+	# fetch all entity associations
 	fetchAll: (callback) ->
 		foreignKeys = @constructor.getForeignKeys()
 		return callback(@) if not foreignKeys? or foreignKeys.length < 1
@@ -296,17 +289,21 @@ class root.CSMVCEntity extends root.CSMVCObservable
 			return callback(@) if --countForeignKeys <= 0
 		for foreignKey in foreignKeys
 			if foreignKey.aliasProperty is foreignKey.aliasProperty.pluralize()
-				@fetchAssciationWithAllForList foreignKey.aliasProperty, countCallback
+				@fetchAssociationWithAllForList foreignKey.aliasProperty, countCallback
 			else
-				@fetchAssciationWithAllForOne foreignKey.aliasProperty, countCallback
+				@fetchAssociationWithAllForOne foreignKey.aliasProperty, countCallback
 
-	fetchAssociation: (property) ->
-		if typeof arguments[1] is 'function'
-			callback = arguments[1]
+	# fetch association for a property of the entity
+	# can specify either a callback method or filters on the fetch result
+	fetchAssociation: (property, option1, option2) ->
+		if typeof option1 is 'function'
+			callback = option1
 			filters  = null
-		else if typeof arguments[1] is 'object'
-			filters  = arguments[1]
-			callback = arguments[2]
+
+		# filters specified
+		else if typeof option1 is 'object'
+			filters  = option1
+			callback = option2
 
 		regexReplace = /\{([a-z_]+)\}/gi
 		for foreignKey in @constructor.getForeignKeys()

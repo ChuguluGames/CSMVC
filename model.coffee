@@ -14,7 +14,9 @@ class root.CSMVCModel extends root.CSMVCObservable
 		@[prop] = attributes[prop] for prop of attributes
 		@
 
+	# merge the properties of an CSMVCEntity into the object
 	mergeEntity: (entity) ->
+		# TODO: use the same method of @fromEntity
 		for property, type of entity.constructor.getColumns()
 			@[property] = entity[property]
 		@

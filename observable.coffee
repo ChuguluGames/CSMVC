@@ -1,30 +1,45 @@
 root = exports ? this
 
-class root.CSMVCObservable extends CSMVCModule
+# require jQuery
+
+class root.CSMVCObservable extends CSMVCTools
+	# -- static --
 	@_observable = null
-	# start static methods
+
+	# listen a global event
 	@on = (eventName, handler) ->
 		@_observable ?= new CSMVCObservable()
 		@_observable.on eventName, handler
 
+	# remove listener of a global event
 	@off = (eventName, handler) ->
 		@_observable ?= new CSMVCObservable()
 		@_observable.off eventName, handler
 
+	# trigger a global event
 	@trigger = (eventName, eventData) ->
 		@_observable ?= new CSMVCObservable()
 		@_observable.trigger eventName, eventData
 
-	@watch = (object, property, handler) ->
+	# watch a specific property of an object
+	@watch = (property, handler, element = @) ->
 		@_observable ?= new CSMVCObservable()
-		@_observable.watch property, handler, object
-	# end static methods
+		@_observable.watch property, handler, element
 
-	_subscribers      : {}
-	_watchers         : {}
-	_definedProperties: []
+	# watch a specific property of an object
+	# call handler after setting the watcher
+	@watchAndGet: (property, handler, element = @) ->
+		@_observable ?= new CSMVCObservable()
+		@_observable.watchAndGet property, handler, element
+
+	# -- static --
+
+	_subscribers      : {} # list of the subscribers of event
+	_watchers         : {} # list of the watchers of property
+	_definedProperties: [] # list of the defined properties
 
 	constructor: ->
+		# reset shared properties(object references)
 		@_subscribers       = {}
 		@_watchers          = {}
 		@_definedProperties = []
@@ -37,6 +52,7 @@ class root.CSMVCObservable extends CSMVCModule
 				@off(eventType) # kill the handler when triggered
 			)
 
+	# listen of an event
 	on: (eventType, handler) ->
 		eventTypeSplitted = eventType.split(":")
 		if eventTypeSplitted.length > 1
@@ -50,6 +66,9 @@ class root.CSMVCObservable extends CSMVCModule
 		@_subscribers[eventType].push(handler)
 		@
 
+	# remove listener of an event
+	# if no specified handler, all subscribers of the event will be erased
+	# if no specified eventType, all subscribers of all events will be erased
 	off: (eventType, handler) ->
 		# remove all
 		if not eventType? and not handler?
@@ -63,19 +82,20 @@ class root.CSMVCObservable extends CSMVCModule
 					subscribers.splice(key, 1)
 		@
 
-	trigger: (eventType) ->
+	# trigger an eventType
+	# eventData is optional
+	trigger: (eventType, eventData...) ->
 		# no subscribers
 		return if not @_subscribers[eventType]?
-
-		# convert the arguments list into an array
-		args = Array.prototype.slice.call(arguments)
-		args.shift() # remove the event type from the array
 
 		# tell about the event for each subscriber
 		subscribers = @_subscribers[eventType].slice(0)
 		for subscriber in subscribers
-			subscriber.apply(@, args)
+			subscriber.apply(@, eventData)
 
+	# watch a property
+	# handler will be called at each update od the property
+	# trigger change:property will be called after handler
 	watch: (property, handler, element = @) ->
 		@_watchers[property] = true
 
@@ -83,28 +103,39 @@ class root.CSMVCObservable extends CSMVCModule
 
 		@on 'change:' + property, handler
 
+	# watch a property and instantly call handler
 	watchAndGet: (property, handler, element = @) ->
 		@watch.apply @, arguments
 		handler.call @, @[property]
 
+	# unWatch a property
+	# if no handler specified, all watchers will be erased
 	unWatch: (property, handler) ->
 		if @_watchers[property]
 			@off 'change:' + property, handler
 
-	defineProperty: (element, property, handler) ->
+	# create getter/setter on a property
+	# add an optional handler when the set method is called
+	# trigger change:property at each update of the value
+	defineProperty: (element, property, handler = no) ->
+		# make sure that we don't define two times the property
 		return for definedProperty in @_definedProperties when definedProperty is property
-
 		@_definedProperties.push property
+		# Object.defineProperty erase initial value, let's save it
 		initialValue = element[property]
+
 		Object.defineProperty element, property,
 			get: ->
-				element["_" + property] || initialValue # when the property is define, the last property is erased
+				element["_" + property] || initialValue
 			,
 			set: (newValue) ->
 				oldValue = element[property]
 				element["_" + property] = newValue
 
-				handler.call @, newValue, oldValue
+				if handler isnt no
+					handler.call @, newValue, oldValue
+
+				# trigger the change for the watchers
 				@trigger 'change:' + property, newValue, oldValue
 			,
 			# this property shows up during enumeration of the properties on the corresponding object
