@@ -2,6 +2,7 @@ root = exports ? this
 
 # TODO: add optional argument possibility for masks: :id?
 # TODO: add exactMatch option for route and global settings
+# TODO: add addRoute()
 
 class root.CSMVCRouter extends root.CSMVCObservable
 	# default route masks
@@ -43,11 +44,13 @@ class root.CSMVCRouter extends root.CSMVCObservable
 
 	_rulesList: {}
 
+	# global settings (for all routes)
 	_settings:
 		redirectIfEmpty: true  # if no route, redirect on home
 		reverse        : false # global reverse binding routes
 		recursive      : true  # stop at first level route
 
+	# local settings: (for a specific route)
 	_rulesSettings:
 		reverse         : false # local reverse binding routes
 		recursive       : true  # stop at current level route
@@ -66,7 +69,7 @@ class root.CSMVCRouter extends root.CSMVCObservable
 		# first rule is home
 		for rule, settings of @rules
 			@home = rule
-			break;
+			break
 
 		# reverse the list
 		if @_settings.reverse

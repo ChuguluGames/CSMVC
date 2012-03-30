@@ -21,6 +21,7 @@ class root.CSMVCTools
       @[key] = value
     @
 
+  # mere two objects into a new one
   mergeObject: (defaultObject, overrideObject) ->
     mergedObject = {}
 
