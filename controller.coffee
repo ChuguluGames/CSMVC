@@ -34,7 +34,7 @@ class root.CSMVCController extends root.CSMVCObservable
 					view.on 'render', hanlderOnViewRender
 					@unWatch 'view', handlerWatchView
 
-			@watch 'view', handlerWatchView
+			@watchAndGet 'view', handlerWatchView
 		@
 
 	# create methods and prepare date for each @events
