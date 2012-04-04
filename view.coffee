@@ -37,13 +37,17 @@ class root.CSMVCView extends root.CSMVCObservable
 		$(@el).attr(@attributes)
 		@
 
+	# set the container's html with the el's html
+	show: ->
+		@container.html @el
+
 	# append view to container
 	append: ->
 		@container.append @el
 
 	# render view element
 	render: (data) ->
-		$(@el).html @template data
+		$(@el).html @template(data)
 		@trigger 'render'
 		@
 

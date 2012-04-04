@@ -98,6 +98,9 @@ class root.CSMVCController extends root.CSMVCObservable
 			for eventData in @_handlersEvents
 				@unDelegateEvent eventData
 
+	destroy: ->
+		@unDelegateEvents()
+
 	# get an element
 	# @getElement 'window'
 	# @getElement context, '.selector'
