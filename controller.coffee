@@ -39,8 +39,8 @@ class root.CSMVCController extends root.CSMVCObservable
 
 	# create methods and prepare date for each @events
 	_createHandlersEvents: ->
-		for eventName, selector of @events
-			do (eventName, selector) =>
+		for selector, eventName of @events
+			do (selector, eventName) =>
 				@addEvent selector, eventName
 
 	# create onEventNameSelector and offEventNameSelector for an event
