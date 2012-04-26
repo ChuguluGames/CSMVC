@@ -37,6 +37,10 @@ class root.CSMVCController extends root.CSMVCObservable
 			@watchAndGet 'view', handlerWatchView
 		@
 
+	addLayout: (view, events) ->
+		for key, value of events
+			@addEvent(key, value)
+
 	# create methods and prepare date for each @events
 	_createHandlersEvents: ->
 		for selector, eventName of @events
@@ -82,6 +86,7 @@ class root.CSMVCController extends root.CSMVCObservable
 	# delegate an event or undelagate it with action = 'off'
 	delegateEvent: (eventData, action = 'on') ->
 		$el = @getElement eventData.context, eventData.selector
+		$el = @getElement @layout.el, eventData.selector if $el.length is 0 and @layout
 		$el[action](eventData.eventName, eventData.handler)
 
 	# undelegate a delegated event
