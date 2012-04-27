@@ -11,6 +11,7 @@ class root.CSMVCController extends root.CSMVCObservable
 	_handlersEvents: []
 	# delegate events when view's rendering
 	_delegateEventsOnViewRendering: yes
+	viewClass: null
 
 	constructor: (attributes) ->
 		super
@@ -20,6 +21,9 @@ class root.CSMVCController extends root.CSMVCObservable
 
 		@_handlersEvents = []
 		@_createHandlersEvents()
+
+		if @viewClass?
+			@view = new @viewClass()
 
 		# delegate events when the view is rendering
 		if @_delegateEventsOnViewRendering
@@ -39,8 +43,8 @@ class root.CSMVCController extends root.CSMVCObservable
 
 	# create methods and prepare date for each @events
 	_createHandlersEvents: ->
-		for selector, eventName of @events
-			do (selector, eventName) =>
+		for eventName, selector of @events
+			do (eventName, selector) =>
 				@addEvent selector, eventName
 
 	# create onEventNameSelector and offEventNameSelector for an event
@@ -86,7 +90,7 @@ class root.CSMVCController extends root.CSMVCObservable
 
 	# undelegate a delegated event
 	unDelegateEvent: (eventData) ->
-		throw "eventData should be specified"  unless eventData?
+		throw "eventData should be specified" unless eventData?
 		@delegateEvent eventData, 'off'
 
 	# remove all delegated events
