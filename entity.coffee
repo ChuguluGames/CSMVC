@@ -317,7 +317,7 @@ class root.CSMVCEntity extends root.CSMVCObservable
 				foreignKey.targetEntityName = @constructor.generateEntityName targetTable
 				foreignKey.aliasProperty ?= targetTable
 
-			# the foreign key is the on we're looking for
+			# the foreign key is the one we're looking for
 			if foreignKey.aliasProperty is property
 
 				targetEntityClass = window[foreignKey.targetEntityName]
