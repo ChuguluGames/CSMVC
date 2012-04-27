@@ -48,12 +48,15 @@ class root.CSMVCView extends root.CSMVCObservable
 	# render view element
 	render: (data) ->
 		$(@el).html @template(data)
+		@append() if @container?
 		@trigger 'render'
 		@
 
 	# destroy view element
 	destroy: ->
-		@_removeModelDataBinding() # remove model data binds
+		# remove model data binds
+		if @modelDataBinding?
+			@_removeModelDataBinding()
 		@clearCache()              # remove cached elements
 		$(@el).remove()            # remove element
 		@
