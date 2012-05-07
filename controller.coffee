@@ -32,10 +32,10 @@ class root.CSMVCController extends root.CSMVCObservable
 				if view?
 					# function to execute when view is rendered
 					hanlderOnViewRender = =>
-						view.off 'render', hanlderOnViewRender
+						view.off 'show', hanlderOnViewRender
 						@delegateEvents view.el
 
-					view.on 'render', hanlderOnViewRender
+					view.on 'show', hanlderOnViewRender
 					@unWatch 'view', handlerWatchView
 
 			@watchAndGet 'view', handlerWatchView
@@ -47,7 +47,7 @@ class root.CSMVCController extends root.CSMVCObservable
 
 	# create methods and prepare date for each @events
 	_createHandlersEvents: ->
-		for eventName, selector of @events
+		for selector,eventName of @events
 			do (eventName, selector) =>
 				@addEvent selector, eventName
 
@@ -91,7 +91,7 @@ class root.CSMVCController extends root.CSMVCObservable
 	delegateEvent: (eventData, action = 'on') ->
 		$el = @getElement eventData.context, eventData.selector
 		$el = @getElement @layout.el, eventData.selector if $el.length is 0 and @layout
-		$el[action](eventData.eventName, eventData.handler)
+		$el[action].call($el, eventData.eventName, eventData.handler)
 
 	# undelegate a delegated event
 	unDelegateEvent: (eventData) ->

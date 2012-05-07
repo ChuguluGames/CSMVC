@@ -40,6 +40,7 @@ class root.CSMVCView extends root.CSMVCObservable
 	# set the container's html with the el's html
 	show: ->
 		@container.html @el
+		@trigger 'show'
 
 	# append view to container
 	append: ->
