@@ -174,8 +174,8 @@ class root.CSMVCRouter extends root.CSMVCObservable
 
 		@trigger "dispatch", route
 
-		for rule in rules
-			rule.callback.apply @, rule.matches
+		rule = rules[(rules.length - 1)..][0]
+		rule.callback.apply @, rule.matches
 
 	# find matched route for specified route
 	_findMathedRulesForRoute: (route) ->
