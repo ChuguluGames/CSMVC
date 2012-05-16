@@ -50,9 +50,9 @@ class root.CSMVCView extends root.CSMVCObservable
 		@container.append @el
 
 	# render view element
-	render: (data) ->
+	render: (data, autoappend) ->
 		$(@el).html @template(data)
-		@append() if @container?
+		@append() if @container? && autoappend
 		@trigger 'render'
 		@
 
