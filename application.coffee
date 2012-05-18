@@ -61,6 +61,6 @@ class root.CSMVCApplication extends root.CSMVCObservable
 
 	# access a new instance of a required module
 	# TODO: make sure that we have the module before creating the new instance
-	getNewModule: (name) ->
+	getNewModule: (name, params) ->
 		module = @getModule name
-		new module()
+		new module(params)
