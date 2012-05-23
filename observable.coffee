@@ -46,11 +46,11 @@ class root.CSMVCObservable extends CSMVCTools
 
 	# bind one time and kill all previous handlers
 	one: (eventType, handler) ->
-		@off(eventType) # first kill all previous handlers
-			.on(eventType, (data...) => # add the new one
-				handler.apply @, data
-				@off(eventType) # kill the handler when triggered
-			)
+		
+		internal_handler = (data...) => # add the new one
+			handler.apply @, data
+			@off(eventType, internal_handler) # kill the handler when triggered
+		@on(eventType, internal_handler)
 
 	# listen of an event
 	on: (eventType, handler) ->
