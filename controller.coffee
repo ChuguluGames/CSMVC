@@ -54,6 +54,10 @@ class root.CSMVCController extends root.CSMVCObservable
 	# create onEventNameSelector and offEventNameSelector for an event
 	# can specify a method on (for custom naming)
 	addEvent: (selector, eventName, methodOn) ->
+		# Do not reassigne the same couple selector/event twice
+		for handler in @_handlersEvents when handler.selector is selector and handler.eventName is eventName
+			return false
+
 		# remove spaces, #, . -, well all weird character by an underscore
 		# ex: replace .my-awesome-selector to my_awesome_selector
 		selectorUnderscored = selector.replace /[^a-z0-9]/gi, '_'
