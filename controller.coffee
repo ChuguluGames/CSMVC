@@ -15,12 +15,13 @@ class root.CSMVCController extends root.CSMVCObservable
 
 	constructor: (attributes) ->
 		@events = @events || {}
+		@_handlersEvents = @_handlersEvents || []
+
 		super
 
 		# merge attributes in object
 		@[prop] = attributes[prop] for prop of attributes
 
-		@_handlersEvents = []
 		@_createHandlersEvents()
 
 		if @viewClass?
@@ -55,6 +56,7 @@ class root.CSMVCController extends root.CSMVCObservable
 	# create onEventNameSelector and offEventNameSelector for an event
 	# can specify a method on (for custom naming)
 	addEvent: (selector, eventName, methodOn) ->
+		@_handlersEvents = @_handlersEvents || []
 		# Do not reassigne the same couple selector/event twice
 		for handler in @_handlersEvents when handler.selector is selector and handler.eventName is eventName
 			return false
@@ -108,7 +110,7 @@ class root.CSMVCController extends root.CSMVCObservable
 	unDelegateEvents: (context) ->
 		if context
 			@delegateEvents context, 'off'
-		else
+		else if @_handlersEvents
 			for eventData in @_handlersEvents
 				@unDelegateEvent eventData
 
