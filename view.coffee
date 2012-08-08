@@ -3,7 +3,7 @@ root = exports ? this
 # dependencies: inflection, jquery
 
 class root.CSMVCView extends root.CSMVCObservable
-	attributes: {}    # attributes of view elements
+	attributes: null    # attributes of view elements
 	template  : null  # template method of view element
 	autoMake  : true  # create view element on instanciation
 	tag       : "div" # tag of the view element
@@ -11,9 +11,10 @@ class root.CSMVCView extends root.CSMVCObservable
 
 	el        : null # view element
 
-	_cache    : {}
+	_cache    : null
 
 	constructor: (attributes) ->
+		@attributes = @attributes || {}
 		super # call observable constructor
 
 		@_cache =

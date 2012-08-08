@@ -6,14 +6,15 @@ class root.CSMVCController extends root.CSMVCObservable
 	# events:
 	# 	event     : '.selector' event'
 	# 	otherEvent: '.other_selector'
-	events: {}
+	events: null
 
-	_handlersEvents: []
+	_handlersEvents: null
 	# delegate events when view's rendering
 	_delegateEventsOnViewRendering: yes
 	viewClass: null
 
 	constructor: (attributes) ->
+		@events = @events || {}
 		super
 
 		# merge attributes in object
