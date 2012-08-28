@@ -171,11 +171,11 @@ class root.CSMVCRouter extends root.CSMVCObservable
 	# trigger and call each handler for matched routed
 	dispatch: (route) ->
 		rules = @_findMathedRulesForRoute route
-
+		return unless rules instanceof Array and rules.length > 0
 		@trigger "dispatch", route
 
-		rule = rules[(rules.length - 1)..][0]
-		rule.callback.apply @, rule.matches
+		if rule = rules[rules.length - 1]
+			rule.callback.apply @, rule.matches
 
 	# find matched route for specified route
 	_findMathedRulesForRoute: (route) ->
