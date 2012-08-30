@@ -116,6 +116,8 @@ class root.CSMVCController extends root.CSMVCObservable
 
 	destroy: ->
 		@unDelegateEvents()
+		@view.destroy() if @view and @view.destroy
+		super
 
 	# get an element
 	# @getElement 'window'
