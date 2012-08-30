@@ -44,9 +44,13 @@ class root.CSMVCObservable extends CSMVCTools
 		@_watchers          = {}
 		@_definedProperties = []
 
+	destroy: ->
+		@off()
+		@_watchers = {}
+
 	# bind one time and kill all previous handlers
 	one: (eventType, handler) ->
-		
+
 		internal_handler = (data...) => # add the new one
 			handler.apply @, data
 			@off(eventType, internal_handler) # kill the handler when triggered
