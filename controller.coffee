@@ -114,9 +114,9 @@ class root.CSMVCController extends root.CSMVCObservable
 			for eventData in @_handlersEvents
 				@unDelegateEvent eventData
 
-	destroy: ->
+	destroy: (removeView = no) ->
 		@unDelegateEvents()
-		@view.destroy() if @view and @view.destroy
+		@view.destroy(removeView) if @view and @view.destroy # destroy without removing html (avoids white screens)
 		super
 
 	# get an element

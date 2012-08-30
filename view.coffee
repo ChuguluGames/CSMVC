@@ -58,12 +58,13 @@ class root.CSMVCView extends root.CSMVCObservable
 		@
 
 	# destroy view element
-	destroy: ->
+	destroy: (remove = yes) ->
 		# remove model data binds
 		if @modelDataBinding?
 			@_removeModelDataBinding()
 		@clearCache()              # remove cached elements
-		$(@el).remove()            # remove element
+		if remove
+			$(@el).remove()            # remove element
 		@
 
 	# update an element
