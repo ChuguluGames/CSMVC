@@ -17,10 +17,7 @@ class root.CSMVCView extends root.CSMVCObservable
 		@attributes = @attributes || {}
 		super # call observable constructor
 
-		@_cache =
-			elements     : {}
-			eventMethods : {}
-			updateMethods: {}
+		@resetCache()
 		@el = null
 
 		@[property] = attributes[property] for property of attributes
@@ -62,7 +59,7 @@ class root.CSMVCView extends root.CSMVCObservable
 		# remove model data binds
 		if @modelDataBinding?
 			@_removeModelDataBinding()
-		@clearCache()              # remove cached elements
+		@resetCache()              # remove cached elements
 		if remove
 			$(@el).remove()            # remove element
 		@
@@ -77,8 +74,11 @@ class root.CSMVCView extends root.CSMVCObservable
 			element.html value
 
 	# remove cached elements
-	clearCache: ->
-		@_cache = {}
+	resetCache: ->
+		@_cache =
+			elements     : {}
+			eventMethods : {}
+			updateMethods: {}
 
 	# prepare model data model binding
 	_initializeModelDataBinding: ->
