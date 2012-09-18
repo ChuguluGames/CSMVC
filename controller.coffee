@@ -70,7 +70,7 @@ class root.CSMVCController extends root.CSMVCObservable
 		methodOffName = ('off_' + eventnameAndSelectorUnderscored).camelize(yes)
 
 		# no method on specified
-		unless methodOn?
+		unless methodOn
 			# ex: on_click_my_awesome_selector
 			methodOnName = ('on_' + eventnameAndSelectorUnderscored).camelize(yes)
 			methodOn = @[methodOnName]
